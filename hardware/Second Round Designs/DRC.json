@@ -1,0 +1,257 @@
+{
+    "$schema": "https://schemas.kicad.org/drc.v1.json",
+    "coordinate_units": "mm",
+    "date": "2025-02-28T14:36:42-0600",
+    "kicad_version": "8.0.8",
+    "schematic_parity": [],
+    "source": "Power Subsystem.kicad_pcb",
+    "unconnected_items": [
+        {
+            "description": "Missing connection between items",
+            "items": [
+                {
+                    "description": "Pad 2 [/Stepper Motor] of R12 on F.Cu",
+                    "pos": {
+                        "x": 101.124,
+                        "y": 80.01
+                    },
+                    "uuid": "f82d9e72-e5c3-4231-8d1d-e5736106c56b"
+                },
+                {
+                    "description": "Pad 1 [/Stepper Motor] of C11 on F.Cu",
+                    "pos": {
+                        "x": 107.526,
+                        "y": 84.709
+                    },
+                    "uuid": "3993c1f4-f636-4fd3-b2a8-fae045f1f0af"
+                }
+            ],
+            "severity": "error",
+            "type": "unconnected_items"
+        }
+    ],
+    "violations": [
+        {
+            "description": "Items shorting two nets (nets /Extra LED and /Stepper Motor)",
+            "items": [
+                {
+                    "description": "Track [/Extra LED] on F.Cu, length 1.4496 mm",
+                    "pos": {
+                        "x": 107.526,
+                        "y": 84.709
+                    },
+                    "uuid": "68993f79-dfe3-475b-82de-cba592e598f4"
+                },
+                {
+                    "description": "Pad 1 [/Stepper Motor] of C11 on F.Cu",
+                    "pos": {
+                        "x": 107.526,
+                        "y": 84.709
+                    },
+                    "uuid": "3993c1f4-f636-4fd3-b2a8-fae045f1f0af"
+                }
+            ],
+            "severity": "error",
+            "type": "shorting_items"
+        },
+        {
+            "description": "Items shorting two nets (nets /Extra LED and /Stepper Motor)",
+            "items": [
+                {
+                    "description": "Track [/Extra LED] on F.Cu, length 1.7030 mm",
+                    "pos": {
+                        "x": 107.526,
+                        "y": 84.709
+                    },
+                    "uuid": "d52510ee-7015-45d8-bdde-6cc7df740c56"
+                },
+                {
+                    "description": "Pad 1 [/Stepper Motor] of C11 on F.Cu",
+                    "pos": {
+                        "x": 107.526,
+                        "y": 84.709
+                    },
+                    "uuid": "3993c1f4-f636-4fd3-b2a8-fae045f1f0af"
+                }
+            ],
+            "severity": "error",
+            "type": "shorting_items"
+        },
+        {
+            "description": "Items shorting two nets (nets /Extra LED and /Stepper Motor)",
+            "items": [
+                {
+                    "description": "Track [/Extra LED] on F.Cu, length 6.6454 mm",
+                    "pos": {
+                        "x": 105.823,
+                        "y": 84.709
+                    },
+                    "uuid": "3adfed67-c753-4fef-802c-fc9b0a6a570b"
+                },
+                {
+                    "description": "Pad 2 [/Stepper Motor] of R12 on F.Cu",
+                    "pos": {
+                        "x": 101.124,
+                        "y": 80.01
+                    },
+                    "uuid": "f82d9e72-e5c3-4231-8d1d-e5736106c56b"
+                }
+            ],
+            "severity": "error",
+            "type": "shorting_items"
+        },
+        {
+            "description": "Board has malformed outline (no edges found on Edge.Cuts layer)",
+            "items": [
+                {
+                    "description": "PCB",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "e0ea5622-1a83-487d-98c4-16c2fbafc9a5"
+                }
+            ],
+            "severity": "error",
+            "type": "invalid_outline"
+        },
+        {
+            "description": "Front solder mask aperture bridges items with different nets",
+            "items": [
+                {
+                    "description": "Track [<no net>] on F.Cu, length 5.4160 mm",
+                    "pos": {
+                        "x": 124.968,
+                        "y": 131.801
+                    },
+                    "uuid": "6a2f56ae-3713-438e-b750-d924ca062164"
+                },
+                {
+                    "description": "Pad 4 [<no net>] of U2 on F.Cu",
+                    "pos": {
+                        "x": 124.968,
+                        "y": 131.801
+                    },
+                    "uuid": "10c772eb-259e-4d01-a482-c9da242bd490"
+                }
+            ],
+            "severity": "error",
+            "type": "solder_mask_bridge"
+        },
+        {
+            "description": "Front solder mask aperture bridges items with different nets",
+            "items": [
+                {
+                    "description": "Track [<no net>] on F.Cu, length 2.5160 mm",
+                    "pos": {
+                        "x": 141.107,
+                        "y": 131.166
+                    },
+                    "uuid": "0eb7415f-02de-4d9d-98b3-781d54156db4"
+                },
+                {
+                    "description": "Pad 4 [<no net>] of U1 on F.Cu",
+                    "pos": {
+                        "x": 143.623,
+                        "y": 131.166
+                    },
+                    "uuid": "634bc83c-4a8e-4c05-a5a3-95646de1269f"
+                }
+            ],
+            "severity": "error",
+            "type": "solder_mask_bridge"
+        },
+        {
+            "description": "Front solder mask aperture bridges items with different nets",
+            "items": [
+                {
+                    "description": "Track [/Extra LED] on F.Cu, length 1.4496 mm",
+                    "pos": {
+                        "x": 107.526,
+                        "y": 84.709
+                    },
+                    "uuid": "68993f79-dfe3-475b-82de-cba592e598f4"
+                },
+                {
+                    "description": "Pad 1 [/Stepper Motor] of C11 on F.Cu",
+                    "pos": {
+                        "x": 107.526,
+                        "y": 84.709
+                    },
+                    "uuid": "3993c1f4-f636-4fd3-b2a8-fae045f1f0af"
+                }
+            ],
+            "severity": "error",
+            "type": "solder_mask_bridge"
+        },
+        {
+            "description": "Front solder mask aperture bridges items with different nets",
+            "items": [
+                {
+                    "description": "Track [/Extra LED] on F.Cu, length 1.7030 mm",
+                    "pos": {
+                        "x": 107.526,
+                        "y": 84.709
+                    },
+                    "uuid": "d52510ee-7015-45d8-bdde-6cc7df740c56"
+                },
+                {
+                    "description": "Pad 1 [/Stepper Motor] of C11 on F.Cu",
+                    "pos": {
+                        "x": 107.526,
+                        "y": 84.709
+                    },
+                    "uuid": "3993c1f4-f636-4fd3-b2a8-fae045f1f0af"
+                }
+            ],
+            "severity": "error",
+            "type": "solder_mask_bridge"
+        },
+        {
+            "description": "Front solder mask aperture bridges items with different nets",
+            "items": [
+                {
+                    "description": "Track [/Extra LED] on F.Cu, length 6.6454 mm",
+                    "pos": {
+                        "x": 105.823,
+                        "y": 84.709
+                    },
+                    "uuid": "3adfed67-c753-4fef-802c-fc9b0a6a570b"
+                },
+                {
+                    "description": "Pad 2 [/Stepper Motor] of R12 on F.Cu",
+                    "pos": {
+                        "x": 101.124,
+                        "y": 80.01
+                    },
+                    "uuid": "f82d9e72-e5c3-4231-8d1d-e5736106c56b"
+                }
+            ],
+            "severity": "error",
+            "type": "solder_mask_bridge"
+        },
+        {
+            "description": "Front solder mask aperture bridges items with different nets",
+            "items": [
+                {
+                    "description": "Track [<no net>] on F.Cu, length 0.8980 mm",
+                    "pos": {
+                        "x": 142.988,
+                        "y": 131.801
+                    },
+                    "uuid": "4e614adc-34b9-4ff7-8793-47e9a7206b26"
+                },
+                {
+                    "description": "Pad 4 [<no net>] of U1 on F.Cu",
+                    "pos": {
+                        "x": 143.623,
+                        "y": 131.166
+                    },
+                    "uuid": "634bc83c-4a8e-4c05-a5a3-95646de1269f"
+                }
+            ],
+            "severity": "error",
+            "type": "solder_mask_bridge"
+        }
+    ]
+}
