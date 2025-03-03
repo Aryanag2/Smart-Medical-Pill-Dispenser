@@ -10,9 +10,9 @@
 ## Record of Work
 
 ### Parts List
-[Parts](Notebook5_image1.png)
-[Ordered Parts](Notebook5_image2.png)
+![Parts](Notebook5_image1.png)
+![Ordered Parts](Notebook5_image2.png)
 
 ### PCBWay Order 1
-[Schematic](Notebook5_image1.png)
-[PCB](Notebook5_image2.png)
+![Schematic](Notebook5_image1.png)
+![PCB](Notebook5_image2.png)

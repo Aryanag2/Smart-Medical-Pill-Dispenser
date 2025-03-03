@@ -10,7 +10,7 @@
 ## Record of Work
 
 ### Subsystems
-[Block Diagram](Notebook2_image2.png)
+![Block Diagram](Notebook2_image2.png)
 
 #### Subsystem 1
 The RTC timekeeps when to dispense the medications according
@@ -53,4 +53,4 @@ to take in a new pill, additionally, it will rotate the pillars so that it is di
 funnel, so we never lose pills in any sense.
 
 ### Visual Aid
-[Canva Drawing](Notebook2_image1.png)
+![Canva Drawing](Notebook2_image1.png)

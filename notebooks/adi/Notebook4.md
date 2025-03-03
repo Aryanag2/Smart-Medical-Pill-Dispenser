@@ -8,8 +8,8 @@
 3. Determine which subsystems to demo for breadboard demo
 
 ## Record of Work
-[First PCB Schematic](Notebook4_image1.png)
-[First PCB](Notebook4_image4.png)
+![First PCB Schematic](Notebook4_image1.png)
+![First PCB](Notebook4_image4.png)
 
 ### TA Meeting Results for Demo:
 1. Interface Subsystem (LEDs + Push button)
@@ -18,5 +18,5 @@
 4. Mechanical Subsystem (servo motor / stepper motor)
 
 ### Battery To Buy
-[Battery Image 1](Notebook4_image2.png)
-[Battery Image 2](Notebook4_image3.png)
+![Battery Image 1](Notebook4_image2.png)
+![Battery Image 2](Notebook4_image3.png)
