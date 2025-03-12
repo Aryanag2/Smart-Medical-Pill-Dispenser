@@ -1,4 +1,4 @@
-# Notebook 4
+# Notebook 5
 
 **Date:** March 1st, 2025
 
@@ -16,3 +16,6 @@
 ### PCBWay Order 1
 ![Schematic](Notebook5_image3.png)
 ![PCB](Notebook5_image4.png)
+
+## Personal Thoughts
+Was able to buy and order the parts for the final demo. Was able to create the PCB for Order 1 in time, despite significant last minute changes. Honestly, just very relaxed right now. We need to make sure we stay up to date with the information the TA and the calendar has. CAN NOT fall behind again.

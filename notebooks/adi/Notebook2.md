@@ -54,3 +54,6 @@ funnel, so we never lose pills in any sense.
 
 ### Visual Aid
 ![Canva Drawing](Notebook2_image1.png)
+
+## Personal Thoughts
+The breakdown of this project seems to be something like power, mechanical, control, and interface. Although the underlying requirements are still not fleshed out. The HX711 and the ESP was the first few things we saw in terms of industry standards, but never heard or used them before. Also its been 5 years since I last worked on 3D printing, so that might become a bit too tough. We also need to start working on the documents, they need to be written well.

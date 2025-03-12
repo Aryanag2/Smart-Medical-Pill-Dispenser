@@ -26,3 +26,6 @@ Key features:
 Benefits: Helps users face the person speaking, making social interactions easier.
 
 ![Idea 4](Notebook1_image3.png)
+
+## Personal Thoughts
+Overall this class is really exciting. Our whole team looks like is working really well, and we are all pretty ambitious about our goals. I am worried about the feasibility of the projects though, since we are limited by time and budget. I do think we can learn most of the things we need to know. We should probably start studying up on KiCAD past the point of the CAD assignment, since it seems to be the main tool of this class. Soldering was hard so, I won't be taking the lead there. 

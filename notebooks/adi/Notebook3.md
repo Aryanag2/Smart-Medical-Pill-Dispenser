@@ -12,3 +12,6 @@
 ![Battery](Notebook3_image2.png)
 ![Battery Backup Circuit](Notebook3_image3.png)
 ![Example Circuit](Notebook3_image4.png)
+
+## Personal Thoughts
+First design on KiCAD is most certainly wrong. I just wanted to chalk something up just in case. The battery backup is worrying me, the battery would need to be rechargeable and just to charge it back up would be a whole 445 worthy project in itself. But, we need to figure out a solution to make this product work for the end user. I definately, need to go back and use labels for the circuit, it is awful otherwise. Also heavily considering removing ATmega and HC05 for ESP32.
