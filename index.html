@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Pill Dispenser Control</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f0f5ff;
+      color: #333;
+    }
+    .container {
+      max-width: 800px;
+      margin: 20px auto;
+      background-color: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #2c3e50;
+      text-align: center;
+      margin-bottom: 5px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #7f8c8d;
+      margin-top: 0;
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 10px 15px;
+      margin: 8px;
+      font-size: 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    button:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    .connect-btn {
+      background-color: #3498db;
+      color: white;
+      font-size: 16px;
+      padding: 12px 20px;
+      display: block;
+      margin: 20px auto;
+      width: 80%;
+      max-width: 300px;
+    }
+    .connect-btn:hover {
+      background-color: #2980b9;
+    }
+    .open-btn {
+      background-color: #2ecc71;
+      color: white;
+      width: 45%;
+    }
+    .open-btn:hover {
+      background-color: #27ae60;
+    }
+    .close-btn {
+      background-color: #e74c3c;
+      color: white;
+      width: 45%;
+    }
+    .close-btn:hover {
+      background-color: #c0392b;
+    }
+    .led-on {
+      background-color: #f1c40f;
+      color: #333;
+      width: 45%;
+    }
+    .led-on:hover {
+      background-color: #f39c12;
+    }
+    .led-off {
+      background-color: #95a5a6;
+      color: white;
+      width: 45%;
+    }
+    .led-off:hover {
+      background-color: #7f8c8d;
+    }
+    .scale-btn {
+      background-color: #9b59b6;
+      color: white;
+      width: 45%;
+    }
+    .scale-btn:hover {
+      background-color: #8e44ad;
+    }
+    #controls {
+      display: none;
+    }
+    .compartment {
+      margin-bottom: 20px;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      transition: all 0.3s;
+    }
+    .compartment:hover {
+      border-color: #3498db;
+      box-shadow: 0 2px 8px rgba(52, 152, 219, 0.2);
+    }
+    .compartment h3 {
+      margin-top: 0;
+      color: #2c3e50;
+      border-bottom: 1px solid #ecf0f1;
+      padding-bottom: 8px;
+    }
+    .btn-container {
+      display: flex;
+      justify-content: space-between;
+    }
+    #weightContainer {
+      margin-top: 25px;
+    }
+    #weightDisplay, #rawDisplay {
+      font-size: 18px;
+      font-weight: bold;
+      margin-top: 10px;
+      text-align: center;
+      padding: 15px;
+      background-color: #ecf0f1;
+      border-radius: 8px;
+      transition: all 0.3s;
+    }
+    #weightDisplay:hover, #rawDisplay:hover {
+      background-color: #d6e4ea;
+    }
+    #status {
+      text-align: center;
+      font-weight: bold;
+      color: #7f8c8d;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 6px;
+      background-color: #f8f9fa;
+    }
+    .status-connected {
+      color: #2ecc71 !important;
+      background-color: #e8f8f0 !important;
+    }
+    .status-error {
+      color: #e74c3c !important;
+      background-color: #fdedeb !important;
+    }
+    .log-container {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #f9f9f9;
+      border-radius: 8px;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    .log-title {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .log-entry {
+      font-family: monospace;
+      font-size: 12px;
+      margin: 4px 0;
+      padding: 4px;
+      border-bottom: 1px solid #eee;
+    }
+    .notification {
+      color: #2980b9;
+    }
+    .command {
+      color: #27ae60;
+    }
+    .error {
+      color: #c0392b;
+    }
+    @media (max-width: 600px) {
+      .container {
+        margin: 10px;
+        padding: 15px;
+      }
+      button {
+        margin: 5px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Smart Pill Dispenser</h1>
+    <p class="subtitle">Bluetooth Control Panel</p>
+    <div id="status">Status: Disconnected</div>
+    <button id="connect" class="connect-btn">Connect via Bluetooth</button>
+
+    <div id="controls">
+      <div class="compartment">
+        <h3>Compartment 1</h3>
+        <div class="btn-container">
+          <button onclick="sendCommand('SERVO1 OPEN')" class="open-btn">Open Compartment</button>
+          <button onclick="sendCommand('SERVO1 CLOSE')" class="close-btn">Close Compartment</button>
+        </div>
+      </div>
+      
+      <div class="compartment">
+        <h3>Compartment 2</h3>
+        <div class="btn-container">
+          <button onclick="sendCommand('SERVO2 OPEN')" class="open-btn">Open Compartment</button>
+          <button onclick="sendCommand('SERVO2 CLOSE')" class="close-btn">Close Compartment</button>
+        </div>
+      </div>
+      
+      <div class="compartment">
+        <h3>Compartment 3</h3>
+        <div class="btn-container">
+          <button onclick="sendCommand('SERVO3 OPEN')" class="open-btn">Open Compartment</button>
+          <button onclick="sendCommand('SERVO3 CLOSE')" class="close-btn">Close Compartment</button>
+        </div>
+      </div>
+      
+      <div class="compartment">
+        <h3>LED Indicator</h3>
+        <div class="btn-container">
+          <button onclick="sendCommand('LED ON')" class="led-on">Turn LED On</button>
+          <button onclick="sendCommand('LED OFF')" class="led-off">Turn LED Off</button>
+        </div>
+      </div>
+      
+      <div class="compartment" id="weightContainer">
+        <h3>Weight Scale Controls</h3>
+        <div class="btn-container">
+          <button onclick="sendCommand('TARE')" class="scale-btn">Tare Scale</button>
+          <button onclick="sendCommand('RAW')" class="scale-btn">Read Raw Value</button>
+        </div>
+        <div id="weightDisplay">Weight: -- g</div>
+        <div id="rawDisplay">Raw: --</div>
+      </div>
+
+      <div class="log-container">
+        <div class="log-title">Communication Log:</div>
+        <div id="logEntries"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // BLE variables
+    let bleDevice;
+    let bleServer;
+    let bleService;
+    let bleRxCharacteristic; // For writing commands
+    let bleTxCharacteristic; // For receiving notifications
+
+    // Nordic UART Service UUIDs
+    const serviceUuid = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+    const rxCharacteristicUuid = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"; // Write
+    const txCharacteristicUuid = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"; // Notify
+
+    // Bypass Bluetooth when developing
+    const simulateMode = false;
+
+    // Keep track of device state
+    let deviceState = {
+      servo1: false,
+      servo2: false,
+      servo3: false,
+      led: false,
+      weight: 0,
+      rawValue: 0
+    };
+
+    // If simulate mode is true, show controls immediately
+    if (simulateMode) {
+      document.getElementById("status").innerText = "Status: Simulated Connection";
+      document.getElementById("controls").style.display = "block";
+      document.getElementById("connect").style.display = "none";
+      addLogEntry("Simulation mode active", "notification");
+    }
+
+    document.getElementById("connect").addEventListener("click", async () => {
+      if (simulateMode) return;
+      
+      try {
+        addLogEntry("Requesting Bluetooth Device...", "notification");
+        bleDevice = await navigator.bluetooth.requestDevice({
+            filters: [
+              { namePrefix: "SmartPill" }
+            ],
+            optionalServices: [serviceUuid]
+          });
+        
+        bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
+        
+        addLogEntry("Connecting to GATT server...", "notification");
+        bleServer = await bleDevice.gatt.connect();
+        
+        addLogEntry("Getting primary service...", "notification");
+        bleService = await bleServer.getPrimaryService(serviceUuid);
+        
+        addLogEntry("Getting characteristics...", "notification");
+        bleRxCharacteristic = await bleService.getCharacteristic(rxCharacteristicUuid);
+        bleTxCharacteristic = await bleService.getCharacteristic(txCharacteristicUuid);
+        
+        await bleTxCharacteristic.startNotifications();
+        bleTxCharacteristic.addEventListener('characteristicvaluechanged', handleNotifications);
+        
+        document.getElementById("status").innerText = "Status: Connected to " + bleDevice.name;
+        document.getElementById("status").className = "status-connected";
+        document.getElementById("controls").style.display = "block";
+        document.getElementById("connect").innerText = "Reconnect";
+        addLogEntry("Bluetooth Device connected successfully!", "notification");
+      } catch (error) {
+        console.error(error);
+        document.getElementById("status").innerText = "Status: Error connecting - " + error.message;
+        document.getElementById("status").className = "status-error";
+        addLogEntry("Connection error: " + error.message, "error");
+      }
+    });
+
+    function onDisconnected() {
+      document.getElementById("status").innerText = "Status: Disconnected";
+      document.getElementById("status").className = "";
+      addLogEntry("Device disconnected", "error");
+      
+      // Try to reconnect automatically
+      addLogEntry("Attempting to reconnect...", "notification");
+      reconnect();
+    }
+
+    async function reconnect() {
+      try {
+        await bleDevice.gatt.connect();
+        addLogEntry("Reconnected successfully!", "notification");
+        document.getElementById("status").innerText = "Status: Reconnected to " + bleDevice.name;
+        document.getElementById("status").className = "status-connected";
+      } catch(error) {
+        addLogEntry("Reconnect failed: " + error, "error");
+      }
+    }
+
+    function handleNotifications(event) {
+      let value = new TextDecoder().decode(event.target.value);
+      console.log("Notification: " + value);
+      addLogEntry("← " + value, "notification");
+      
+      // Parse notifications based on their prefix
+      if (value.startsWith("WEIGHT:")) {
+        document.getElementById("weightDisplay").innerText = value;
+        // Extract the weight value (could be used for other UI elements)
+        const weightMatch = value.match(/WEIGHT:\s+([\d.]+)\s+g/);
+        if (weightMatch) {
+          deviceState.weight = parseFloat(weightMatch[1]);
+        }
+      } 
+      else if (value.startsWith("RAW:")) {
+        document.getElementById("rawDisplay").innerText = value;
+        // Extract raw value
+        const rawMatch = value.match(/RAW:\s+([\d-]+)/);
+        if (rawMatch) {
+          deviceState.rawValue = parseInt(rawMatch[1]);
+        }
+      }
+      else if (value.startsWith("OK:")) {
+        // Handle acknowledgments
+        if (value.includes("tared")) {
+          // Flash the weight display to show taring was successful
+          const weightDisplay = document.getElementById("weightDisplay");
+          weightDisplay.style.backgroundColor = "#d4efdf";
+          setTimeout(() => {
+            weightDisplay.style.backgroundColor = "#ecf0f1";
+          }, 500);
+        }
+      }
+    }
+
+    async function sendCommand(cmd) {
+      // If simulated mode, just update UI accordingly
+      if (simulateMode) {
+        console.log("Simulated Command: " + cmd);
+        addLogEntry("→ " + cmd + " (simulated)", "command");
+        
+        // Simulate responses
+        if (cmd === "TARE") {
+          document.getElementById("weightDisplay").innerText = "WEIGHT: 0.00 g";
+          addLogEntry("← OK: Scale tared (simulated)", "notification");
+        } else if (cmd === "RAW") {
+          document.getElementById("rawDisplay").innerText = "RAW: 8421";
+          addLogEntry("← RAW: 8421 (simulated)", "notification");
+        } else if (cmd.includes("OPEN")) {
+          const compartment = cmd.split(" ")[0];
+          addLogEntry(`← ${compartment} opened (simulated)`, "notification");
+        } else if (cmd.includes("CLOSE")) {
+          const compartment = cmd.split(" ")[0];
+          addLogEntry(`← ${compartment} closed (simulated)`, "notification");
+        } else if (cmd === "LED ON") {
+          addLogEntry("← LED turned ON (simulated)", "notification");
+        } else if (cmd === "LED OFF") {
+          addLogEntry("← LED turned OFF (simulated)", "notification");
+        }
+        return;
+      }
+
+      if (!bleRxCharacteristic) {
+        addLogEntry("Not connected to Bluetooth! Please connect first.", "error");
+        return;
+      }
+      
+      addLogEntry("→ " + cmd, "command");
+      console.log("Sending command: " + cmd);
+      
+      try {
+        const encoder = new TextEncoder();
+        await bleRxCharacteristic.writeValue(encoder.encode(cmd));
+        
+        // Update UI state based on command
+        if (cmd.includes("SERVO1")) {
+          deviceState.servo1 = cmd.includes("OPEN");
+        } else if (cmd.includes("SERVO2")) {
+          deviceState.servo2 = cmd.includes("OPEN");
+        } else if (cmd.includes("SERVO3")) {
+          deviceState.servo3 = cmd.includes("OPEN");
+        } else if (cmd.includes("LED")) {
+          deviceState.led = cmd.includes("ON");
+        }
+      } catch (error) {
+        console.error("Error sending command:", error);
+        addLogEntry("Error sending command: " + error.message, "error");
+      }
+    }
+
+    function addLogEntry(message, type) {
+      const logContainer = document.getElementById("logEntries");
+      const entry = document.createElement("div");
+      entry.className = "log-entry " + type;
+      entry.textContent = message;
+      logContainer.appendChild(entry);
+      logContainer.scrollTop = logContainer.scrollHeight;
+      
+      // Keep only the last 50 entries
+      const entries = logContainer.getElementsByClassName("log-entry");
+      if (entries.length > 50) {
+        logContainer.removeChild(entries[0]);
+      }
+    }
+
+    // Function to check Web Bluetooth API availability
+    function isWebBluetoothAvailable() {
+      if (!navigator.bluetooth) {
+        document.getElementById("status").innerText = 
+          "Status: Web Bluetooth not available. Try Chrome on desktop or Android.";
+        document.getElementById("status").className = "status-error";
+        document.getElementById("connect").disabled = true;
+        return false;
+      }
+      return true;
+    }
+
+    // Check if Web Bluetooth is available on page load
+    window.addEventListener('load', () => {
+      isWebBluetoothAvailable();
+    });
+  </script>
+</body>
+</html>
