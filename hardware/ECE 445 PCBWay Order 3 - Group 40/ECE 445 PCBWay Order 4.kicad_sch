@@ -1182,12 +1182,13 @@
 					(hide yes)
 				)
 			)
-			(property "Description" ""
+			(property "Description" "FSM6JSMA=SMT,TACTILE,PB SWITCH"
 				(at 0 0 0)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
+					(justify bottom)
 					(hide yes)
 				)
 			)
@@ -1332,16 +1333,6 @@
 				)
 			)
 			(property "MF" "TE Connectivity"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify bottom)
-					(hide yes)
-				)
-			)
-			(property "DESCRIPTION" "FSM6JSMA=SMT,TACTILE,PB SWITCH"
 				(at 0 0 0)
 				(effects
 					(font
@@ -5704,6 +5695,10 @@
 	(no_connect
 		(at 67.31 43.18)
 		(uuid "ef474415-3566-45cc-9c68-5e8ac78b4f1e")
+	)
+	(no_connect
+		(at 91.44 109.22)
+		(uuid "fc03b86e-f830-4ec8-b218-a13fd0255e1f")
 	)
 	(no_connect
 		(at 36.83 81.28)
@@ -13632,7 +13627,7 @@
 			)
 		)
 		(pin "1"
-			(uuid "96c0bc4f-c3b3-47d4-9151-5d1c5759df85")
+			(uuid "96c0bc4f-c3b3-47d4-9151-5d1c5759df86")
 		)
 		(instances
 			(project ""
@@ -13767,7 +13762,7 @@
 			)
 		)
 		(pin "1"
-			(uuid "96c0bc4f-c3b3-47d4-9151-5d1c5759df85")
+			(uuid "96c0bc4f-c3b3-47d4-9151-5d1c5759df87")
 		)
 		(instances
 			(project ""
@@ -14249,10 +14244,10 @@
 			)
 		)
 		(pin "2"
-			(uuid "266b129c-69a7-4f39-bfac-62b9ffb2486c")
+			(uuid "266b129c-69a7-4f39-bfac-62b9ffb2486d")
 		)
 		(pin "1"
-			(uuid "ad8672ef-40ad-40d9-adf6-9ce757a2874d")
+			(uuid "ad8672ef-40ad-40d9-adf6-9ce757a2874e")
 		)
 		(instances
 			(project ""
@@ -14799,7 +14794,7 @@
 			)
 		)
 		(pin "1"
-			(uuid "96c0bc4f-c3b3-47d4-9151-5d1c5759df85")
+			(uuid "96c0bc4f-c3b3-47d4-9151-5d1c5759df88")
 		)
 		(instances
 			(project ""

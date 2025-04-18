@@ -98,6 +98,43 @@
     .scale-btn:hover {
       background-color: #8e44ad;
     }
+    .vibrate-on {
+      background-color: #e67e22;
+      color: white;
+      width: 45%;
+    }
+    .vibrate-on:hover {
+      background-color: #d35400;
+    }
+    .vibrate-off {
+      background-color: #95a5a6;
+      color: white;
+      width: 45%;
+    }
+    .vibrate-off:hover {
+      background-color: #7f8c8d;
+    }
+    .comp-led-on {
+      background-color: #3498db;
+      color: white;
+      width: 45%;
+    }
+    .comp-led-on:hover {
+      background-color: #2980b9;
+    }
+    .comp-led-off {
+      background-color: #95a5a6;
+      color: white;
+      width: 45%;
+    }
+    .comp-led-off:hover {
+      background-color: #7f8c8d;
+    }
+    .led-controls {
+      margin-top: 10px;
+      border-top: 1px dashed #ecf0f1;
+      padding-top: 10px;
+    }
     #controls {
       display: none;
     }
@@ -183,6 +220,46 @@
     .error {
       color: #c0392b;
     }
+    .status-indicators {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      margin-bottom: 15px;
+    }
+    .status-indicator {
+      text-align: center;
+      margin: 5px;
+      flex: 1 0 30%;
+      min-width: 100px;
+    }
+    .indicator-light {
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 5px;
+      vertical-align: middle;
+    }
+    .indicator-off {
+      background-color: #ccc;
+      box-shadow: 0 0 5px #ccc;
+    }
+    .indicator-on-power {
+      background-color: #3498db;
+      box-shadow: 0 0 5px #3498db;
+    }
+    .indicator-on-refill {
+      background-color: #e74c3c;
+      box-shadow: 0 0 5px #e74c3c;
+    }
+    .indicator-on-bluetooth {
+      background-color: #2980b9;
+      box-shadow: 0 0 5px #2980b9;
+    }
+    .indicator-on-compartment {
+      background-color: #2ecc71;
+      box-shadow: 0 0 5px #2ecc71;
+    }
     @media (max-width: 600px) {
       .container {
         margin: 10px;
@@ -190,6 +267,9 @@
       }
       button {
         margin: 5px;
+      }
+      .status-indicator {
+        flex: 1 0 45%;
       }
     }
   </style>
@@ -200,13 +280,45 @@
     <p class="subtitle">Bluetooth Control Panel</p>
     <div id="status">Status: Disconnected</div>
     <button id="connect" class="connect-btn">Connect via Bluetooth</button>
-
     <div id="controls">
+      <div class="status-indicators">
+        <div class="status-indicator">
+          <span class="indicator-light indicator-on-power"></span>
+          <span>Power</span>
+        </div>
+        <div class="status-indicator">
+          <span id="refillIndicator" class="indicator-light indicator-off"></span>
+          <span>Refill</span>
+        </div>
+        <div class="status-indicator">
+          <span id="bluetoothIndicator" class="indicator-light indicator-off"></span>
+          <span>Bluetooth</span>
+        </div>
+        <div class="status-indicator">
+          <span id="comp1Indicator" class="indicator-light indicator-off"></span>
+          <span>Comp 1</span>
+        </div>
+        <div class="status-indicator">
+          <span id="comp2Indicator" class="indicator-light indicator-off"></span>
+          <span>Comp 2</span>
+        </div>
+        <div class="status-indicator">
+          <span id="comp3Indicator" class="indicator-light indicator-off"></span>
+          <span>Comp 3</span>
+        </div>
+      </div>
+      
       <div class="compartment">
         <h3>Compartment 1</h3>
         <div class="btn-container">
           <button onclick="sendCommand('SERVO1 OPEN')" class="open-btn">Open Compartment</button>
           <button onclick="sendCommand('SERVO1 CLOSE')" class="close-btn">Close Compartment</button>
+        </div>
+        <div class="led-controls">
+          <div class="btn-container">
+            <button onclick="sendCommand('COMP1_LED ON')" class="comp-led-on">LED On</button>
+            <button onclick="sendCommand('COMP1_LED OFF')" class="comp-led-off">LED Off</button>
+          </div>
         </div>
       </div>
       
@@ -216,6 +328,12 @@
           <button onclick="sendCommand('SERVO2 OPEN')" class="open-btn">Open Compartment</button>
           <button onclick="sendCommand('SERVO2 CLOSE')" class="close-btn">Close Compartment</button>
         </div>
+        <div class="led-controls">
+          <div class="btn-container">
+            <button onclick="sendCommand('COMP2_LED ON')" class="comp-led-on">LED On</button>
+            <button onclick="sendCommand('COMP2_LED OFF')" class="comp-led-off">LED Off</button>
+          </div>
+        </div>
       </div>
       
       <div class="compartment">
@@ -224,6 +342,12 @@
           <button onclick="sendCommand('SERVO3 OPEN')" class="open-btn">Open Compartment</button>
           <button onclick="sendCommand('SERVO3 CLOSE')" class="close-btn">Close Compartment</button>
         </div>
+        <div class="led-controls">
+          <div class="btn-container">
+            <button onclick="sendCommand('COMP3_LED ON')" class="comp-led-on">LED On</button>
+            <button onclick="sendCommand('COMP3_LED OFF')" class="comp-led-off">LED Off</button>
+          </div>
+        </div>
       </div>
       
       <div class="compartment">
@@ -231,6 +355,14 @@
         <div class="btn-container">
           <button onclick="sendCommand('LED ON')" class="led-on">Turn LED On</button>
           <button onclick="sendCommand('LED OFF')" class="led-off">Turn LED Off</button>
+        </div>
+      </div>
+      
+      <div class="compartment">
+        <h3>Vibration Motor</h3>
+        <div class="btn-container">
+          <button onclick="sendCommand('VIBRATE ON')" class="vibrate-on">Turn Vibrator On</button>
+          <button onclick="sendCommand('VIBRATE OFF')" class="vibrate-off">Turn Vibrator Off</button>
         </div>
       </div>
       
@@ -243,14 +375,12 @@
         <div id="weightDisplay">Weight: -- g</div>
         <div id="rawDisplay">Raw: --</div>
       </div>
-
       <div class="log-container">
         <div class="log-title">Communication Log:</div>
         <div id="logEntries"></div>
       </div>
     </div>
   </div>
-
   <script>
     // BLE variables
     let bleDevice;
@@ -258,33 +388,34 @@
     let bleService;
     let bleRxCharacteristic; // For writing commands
     let bleTxCharacteristic; // For receiving notifications
-
     // Nordic UART Service UUIDs
     const serviceUuid = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
     const rxCharacteristicUuid = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"; // Write
     const txCharacteristicUuid = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"; // Notify
-
     // Bypass Bluetooth when developing
     const simulateMode = false;
-
     // Keep track of device state
     let deviceState = {
       servo1: false,
       servo2: false,
       servo3: false,
       led: false,
+      vibrate: false,
+      comp1Led: false,
+      comp2Led: false,
+      comp3Led: false,
       weight: 0,
-      rawValue: 0
+      rawValue: 0,
+      refillNeeded: false
     };
-
     // If simulate mode is true, show controls immediately
     if (simulateMode) {
       document.getElementById("status").innerText = "Status: Simulated Connection";
       document.getElementById("controls").style.display = "block";
       document.getElementById("connect").style.display = "none";
+      document.getElementById("bluetoothIndicator").className = "indicator-light indicator-on-bluetooth";
       addLogEntry("Simulation mode active", "notification");
     }
-
     document.getElementById("connect").addEventListener("click", async () => {
       if (simulateMode) return;
       
@@ -316,36 +447,43 @@
         document.getElementById("status").className = "status-connected";
         document.getElementById("controls").style.display = "block";
         document.getElementById("connect").innerText = "Reconnect";
+        document.getElementById("bluetoothIndicator").className = "indicator-light indicator-on-bluetooth";
         addLogEntry("Bluetooth Device connected successfully!", "notification");
       } catch (error) {
         console.error(error);
         document.getElementById("status").innerText = "Status: Error connecting - " + error.message;
         document.getElementById("status").className = "status-error";
+        document.getElementById("bluetoothIndicator").className = "indicator-light indicator-off";
         addLogEntry("Connection error: " + error.message, "error");
       }
     });
-
     function onDisconnected() {
       document.getElementById("status").innerText = "Status: Disconnected";
       document.getElementById("status").className = "";
+      document.getElementById("bluetoothIndicator").className = "indicator-light indicator-off";
+      
+      // Reset all indicator lights
+      document.getElementById("comp1Indicator").className = "indicator-light indicator-off";
+      document.getElementById("comp2Indicator").className = "indicator-light indicator-off";
+      document.getElementById("comp3Indicator").className = "indicator-light indicator-off";
+      
       addLogEntry("Device disconnected", "error");
       
       // Try to reconnect automatically
       addLogEntry("Attempting to reconnect...", "notification");
       reconnect();
     }
-
     async function reconnect() {
       try {
         await bleDevice.gatt.connect();
         addLogEntry("Reconnected successfully!", "notification");
         document.getElementById("status").innerText = "Status: Reconnected to " + bleDevice.name;
         document.getElementById("status").className = "status-connected";
+        document.getElementById("bluetoothIndicator").className = "indicator-light indicator-on-bluetooth";
       } catch(error) {
         addLogEntry("Reconnect failed: " + error, "error");
       }
     }
-
     function handleNotifications(event) {
       let value = new TextDecoder().decode(event.target.value);
       console.log("Notification: " + value);
@@ -358,6 +496,15 @@
         const weightMatch = value.match(/WEIGHT:\s+([\d.]+)\s+g/);
         if (weightMatch) {
           deviceState.weight = parseFloat(weightMatch[1]);
+          
+          // Update refill indicator based on weight
+          if (deviceState.weight < 5.0) {
+            deviceState.refillNeeded = true;
+            document.getElementById("refillIndicator").className = "indicator-light indicator-on-refill";
+          } else {
+            deviceState.refillNeeded = false;
+            document.getElementById("refillIndicator").className = "indicator-light indicator-off";
+          }
         }
       } 
       else if (value.startsWith("RAW:")) {
@@ -380,34 +527,66 @@
         }
       }
     }
-
     async function sendCommand(cmd) {
       // If simulated mode, just update UI accordingly
       if (simulateMode) {
         console.log("Simulated Command: " + cmd);
         addLogEntry("→ " + cmd + " (simulated)", "command");
         
-        // Simulate responses
+        // Simulate responses and update UI indicators
         if (cmd === "TARE") {
           document.getElementById("weightDisplay").innerText = "WEIGHT: 0.00 g";
           addLogEntry("← OK: Scale tared (simulated)", "notification");
         } else if (cmd === "RAW") {
           document.getElementById("rawDisplay").innerText = "RAW: 8421";
           addLogEntry("← RAW: 8421 (simulated)", "notification");
-        } else if (cmd.includes("OPEN")) {
-          const compartment = cmd.split(" ")[0];
-          addLogEntry(`← ${compartment} opened (simulated)`, "notification");
-        } else if (cmd.includes("CLOSE")) {
-          const compartment = cmd.split(" ")[0];
-          addLogEntry(`← ${compartment} closed (simulated)`, "notification");
+        } else if (cmd === "SERVO1 OPEN") {
+          document.getElementById("comp1Indicator").className = "indicator-light indicator-on-compartment";
+          addLogEntry("← SERVO1 opened (simulated)", "notification");
+        } else if (cmd === "SERVO1 CLOSE") {
+          document.getElementById("comp1Indicator").className = "indicator-light indicator-off";
+          addLogEntry("← SERVO1 closed (simulated)", "notification");
+        } else if (cmd === "SERVO2 OPEN") {
+          document.getElementById("comp2Indicator").className = "indicator-light indicator-on-compartment";
+          addLogEntry("← SERVO2 opened (simulated)", "notification");
+        } else if (cmd === "SERVO2 CLOSE") {
+          document.getElementById("comp2Indicator").className = "indicator-light indicator-off";
+          addLogEntry("← SERVO2 closed (simulated)", "notification");
+        } else if (cmd === "SERVO3 OPEN") {
+          document.getElementById("comp3Indicator").className = "indicator-light indicator-on-compartment";
+          addLogEntry("← SERVO3 opened (simulated)", "notification");
+        } else if (cmd === "SERVO3 CLOSE") {
+          document.getElementById("comp3Indicator").className = "indicator-light indicator-off";
+          addLogEntry("← SERVO3 closed (simulated)", "notification");
         } else if (cmd === "LED ON") {
           addLogEntry("← LED turned ON (simulated)", "notification");
         } else if (cmd === "LED OFF") {
           addLogEntry("← LED turned OFF (simulated)", "notification");
+        } else if (cmd === "VIBRATE ON") {
+          addLogEntry("← Vibration motor turned ON (simulated)", "notification");
+        } else if (cmd === "VIBRATE OFF") {
+          addLogEntry("← Vibration motor turned OFF (simulated)", "notification");
+        } else if (cmd === "COMP1_LED ON") {
+          document.getElementById("comp1Indicator").className = "indicator-light indicator-on-compartment";
+          addLogEntry("← Compartment 1 LED turned ON (simulated)", "notification");
+        } else if (cmd === "COMP1_LED OFF") {
+          document.getElementById("comp1Indicator").className = "indicator-light indicator-off";
+          addLogEntry("← Compartment 1 LED turned OFF (simulated)", "notification");
+        } else if (cmd === "COMP2_LED ON") {
+          document.getElementById("comp2Indicator").className = "indicator-light indicator-on-compartment";
+          addLogEntry("← Compartment 2 LED turned ON (simulated)", "notification");
+        } else if (cmd === "COMP2_LED OFF") {
+          document.getElementById("comp2Indicator").className = "indicator-light indicator-off";
+          addLogEntry("← Compartment 2 LED turned OFF (simulated)", "notification");
+        } else if (cmd === "COMP3_LED ON") {
+          document.getElementById("comp3Indicator").className = "indicator-light indicator-on-compartment";
+          addLogEntry("← Compartment 3 LED turned ON (simulated)", "notification");
+        } else if (cmd === "COMP3_LED OFF") {
+          document.getElementById("comp3Indicator").className = "indicator-light indicator-off";
+          addLogEntry("← Compartment 3 LED turned OFF (simulated)", "notification");
         }
         return;
       }
-
       if (!bleRxCharacteristic) {
         addLogEntry("Not connected to Bluetooth! Please connect first.", "error");
         return;
@@ -421,21 +600,56 @@
         await bleRxCharacteristic.writeValue(encoder.encode(cmd));
         
         // Update UI state based on command
-        if (cmd.includes("SERVO1")) {
-          deviceState.servo1 = cmd.includes("OPEN");
-        } else if (cmd.includes("SERVO2")) {
-          deviceState.servo2 = cmd.includes("OPEN");
-        } else if (cmd.includes("SERVO3")) {
-          deviceState.servo3 = cmd.includes("OPEN");
-        } else if (cmd.includes("LED")) {
-          deviceState.led = cmd.includes("ON");
+        if (cmd === "SERVO1 OPEN") {
+          deviceState.servo1 = true;
+          document.getElementById("comp1Indicator").className = "indicator-light indicator-on-compartment";
+        } else if (cmd === "SERVO1 CLOSE") {
+          deviceState.servo1 = false;
+          document.getElementById("comp1Indicator").className = "indicator-light indicator-off";
+        } else if (cmd === "SERVO2 OPEN") {
+          deviceState.servo2 = true;
+          document.getElementById("comp2Indicator").className = "indicator-light indicator-on-compartment";
+        } else if (cmd === "SERVO2 CLOSE") {
+          deviceState.servo2 = false;
+          document.getElementById("comp2Indicator").className = "indicator-light indicator-off";
+        } else if (cmd === "SERVO3 OPEN") {
+          deviceState.servo3 = true;
+          document.getElementById("comp3Indicator").className = "indicator-light indicator-on-compartment";
+        } else if (cmd === "SERVO3 CLOSE") {
+          deviceState.servo3 = false;
+          document.getElementById("comp3Indicator").className = "indicator-light indicator-off";
+        } else if (cmd === "LED ON") {
+          deviceState.led = true;
+        } else if (cmd === "LED OFF") {
+          deviceState.led = false;
+        } else if (cmd === "VIBRATE ON") {
+          deviceState.vibrate = true;
+        } else if (cmd === "VIBRATE OFF") {
+          deviceState.vibrate = false;
+        } else if (cmd === "COMP1_LED ON") {
+          deviceState.comp1Led = true;
+          document.getElementById("comp1Indicator").className = "indicator-light indicator-on-compartment";
+        } else if (cmd === "COMP1_LED OFF") {
+          deviceState.comp1Led = false;
+          document.getElementById("comp1Indicator").className = "indicator-light indicator-off";
+        } else if (cmd === "COMP2_LED ON") {
+          deviceState.comp2Led = true;
+          document.getElementById("comp2Indicator").className = "indicator-light indicator-on-compartment";
+        } else if (cmd === "COMP2_LED OFF") {
+          deviceState.comp2Led = false;
+          document.getElementById("comp2Indicator").className = "indicator-light indicator-off";
+        } else if (cmd === "COMP3_LED ON") {
+          deviceState.comp3Led = true;
+          document.getElementById("comp3Indicator").className = "indicator-light indicator-on-compartment";
+        } else if (cmd === "COMP3_LED OFF") {
+          deviceState.comp3Led = false;
+          document.getElementById("comp3Indicator").className = "indicator-light indicator-off";
         }
       } catch (error) {
         console.error("Error sending command:", error);
         addLogEntry("Error sending command: " + error.message, "error");
       }
     }
-
     function addLogEntry(message, type) {
       const logContainer = document.getElementById("logEntries");
       const entry = document.createElement("div");
@@ -450,7 +664,6 @@
         logContainer.removeChild(entries[0]);
       }
     }
-
     // Function to check Web Bluetooth API availability
     function isWebBluetoothAvailable() {
       if (!navigator.bluetooth) {
@@ -462,7 +675,6 @@
       }
       return true;
     }
-
     // Check if Web Bluetooth is available on page load
     window.addEventListener('load', () => {
       isWebBluetoothAvailable();
