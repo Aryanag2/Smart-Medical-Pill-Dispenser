@@ -1,10 +1,10 @@
-# Notebook 7
+# Notebook 8
 
 **Date:** April 6th, 2025
 
 ## Objectives
 1. Complete PCB for FT232RL for ECE Order 4
-3. Solder PCB3-Personal using Stencil
+2. Solder PCB3-Personal using Stencil
 
 ## Record of Work
 
