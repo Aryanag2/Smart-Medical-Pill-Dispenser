@@ -77,6 +77,42 @@ unsigned long lastServoActionTime = 0;
 const unsigned long servoCompletionTimeout = 3000; // 3 seconds after servo action to turn off LEDs
 unsigned long lastDispenseCheck = 0;
 const unsigned long dispenseCheckInterval = 2000; // Check dispense completion every 2 seconds
+// ----- Weight and servo tracking -----
+bool servoMotionPending = false;
+bool weightMeasurementNeeded = false;
+unsigned long servoCompletionTime = 0;
+const unsigned long servoSettlingTime = 1000; // Wait 1 second for pill to settle after servo movement
+const unsigned long servoOperationTimeout = 3000; // Maximum time to wait for servo operation to complete
+// Calibration values
+float calibrationWeight = 0.0614;  // Weight used for calibration in mg
+long calibrationReading = 0;  // Raw reading at calibration weight
+float calibrationFactor = 0.5; // Current calibration factor
+// Auto-calibration state
+bool isAutoCalibrating = false;
+unsigned long calibrationStartTime = 0;
+int calibrationStep = 0;
+float knownWeightMg = 0; // Known weight in mg
+// ========== Weight Reading with filtering ==========
+float getFilteredWeight() {
+  const int samples = 20;  // Higher sample count for stability
+  float readings[samples];
+  float sum = 0;
+  
+  // Take multiple readings
+  for(int i = 0; i < samples; i++) {
+    readings[i] = scale.get_units(3);  // Multiple conversions per reading
+    sum += readings[i];
+    delay(5);  // Short delay between readings
+  }
+  
+  // Calculate average
+  float average = sum / samples;
+  
+  // Convert to milligrams
+  float weight_mg = average * 1000;  // Convert g to mg
+  
+  return weight_mg;
+}
 // ----- BLE Server Callbacks -----
 class MyServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer* pServer) override {
@@ -113,6 +149,8 @@ class MyServerCallbacks : public BLEServerCallbacks {
       "BT_LED ON/OFF\n"
       "TARE\n"
       "RAW\n"
+      "CALIBRATE:WEIGHT_IN_MG\n"
+      "AUTO_CALIBRATE:WEIGHT_IN_MG\n"
       "SET_TIME:YYYY-MM-DD HH:MM:SS\n"
       "ADD_SCHEDULE:ID,HOUR,MINUTE,DAYS\n"
       "CLEAR_SCHEDULES\n"
@@ -259,6 +297,8 @@ class MyCallbacks : public BLECharacteristicCallbacks {
         "BT_LED ON/OFF\n"
         "TARE\n"
         "RAW\n"
+        "CALIBRATE:WEIGHT_IN_MG\n"
+        "AUTO_CALIBRATE:WEIGHT_IN_MG\n"
         "SET_TIME:YYYY-MM-DD HH:MM:SS\n"
         "ADD_SCHEDULE:ID,HOUR,MINUTE,DAYS\n"
         "CLEAR_SCHEDULES\n"
@@ -271,7 +311,7 @@ class MyCallbacks : public BLECharacteristicCallbacks {
     
     // TARE
     if (cmd == "TARE") {
-      scale.tare();
+      scale.tare(20);  // Use more samples for stable taring
       Serial.println("Scale tared.");
       pTxCharacteristic->setValue("OK: Scale tared");
       pTxCharacteristic->notify();
@@ -280,7 +320,7 @@ class MyCallbacks : public BLECharacteristicCallbacks {
     
     // RAW
     if (cmd == "RAW") {
-      long raw = scale.read_average(5);
+      long raw = scale.read_average(10);  // Increased samples for stability
       char buf[32];
       snprintf(buf, sizeof(buf), "RAW: %ld", raw);
       Serial.println(buf);
@@ -289,49 +329,128 @@ class MyCallbacks : public BLECharacteristicCallbacks {
       return;
     }
     
+    // CALIBRATE with a known weight in mg
+    if (cmd.startsWith("CALIBRATE:")) {
+      String weightStr = cmd.substring(10); // Extract weight part
+      float knownWeightMg = weightStr.toFloat();
+      
+      if (knownWeightMg <= 0) {
+        String response = "Error: Invalid weight value. Format: CALIBRATE:WEIGHT_IN_MG";
+        pTxCharacteristic->setValue(response.c_str());
+        pTxCharacteristic->notify();
+        return;
+      }
+      
+      Serial.printf("Starting calibration with %.2f mg reference weight\n", knownWeightMg);
+      
+      // Execute calibration procedure
+      calibrateScale(knownWeightMg);
+      return;
+    }
+    
+    // AUTO_CALIBRATE with a known weight in mg (automatic step-by-step process)
+    if (cmd.startsWith("AUTO_CALIBRATE:")) {
+      String weightStr = cmd.substring(15); // Extract weight part
+      float knownWeightMg = weightStr.toFloat();
+      
+      if (knownWeightMg <= 0) {
+        String response = "Error: Invalid weight value. Format: AUTO_CALIBRATE:WEIGHT_IN_MG";
+        pTxCharacteristic->setValue(response.c_str());
+        pTxCharacteristic->notify();
+        return;
+      }
+      
+      Serial.printf("Starting automatic calibration with %.2f mg reference weight\n", knownWeightMg);
+      
+      // Start automatic calibration sequence
+      startAutoCalibration(knownWeightMg);
+      return;
+    }
+    
+    // Handle servo commands with weight measurement
+    
     // Servo 1
     if (cmd == "SERVO1 OPEN" && servo1Pos != 0) {
+      servoMotionPending = true;
+      servoCompletionTime = millis() + servoOperationTimeout;
+      
       servo1.write(10);  // OPEN position (lower angle)
       servo1Pos = 0;
       dispensePending = true;
       lastServoActionTime = millis();
       Serial.println("Compartment 1 Opened");
+      
+      // Request weight measurement after opening
+      weightMeasurementNeeded = true;
     } else if (cmd == "SERVO1 CLOSE" && servo1Pos != 180) {
+      servoMotionPending = true;
+      servoCompletionTime = millis() + servoOperationTimeout;
+      
       servo1.write(175);  // CLOSE position (higher angle)
       servo1Pos = 180;
       dispensePending = true;
       lastServoActionTime = millis();
       Serial.println("Compartment 1 Closed");
+      
+      // Reset servo motion pending after operation completes
+      servoCompletionTime = millis();
+      servoMotionPending = false;
     }
 
     // Servo 2
     if (cmd == "SERVO2 OPEN" && servo2Pos != 0) {
+      servoMotionPending = true;
+      servoCompletionTime = millis() + servoOperationTimeout;
+      
       servo2.write(10);  // OPEN position (lower angle)
       servo2Pos = 0;
       dispensePending = true;
       lastServoActionTime = millis();
       Serial.println("Compartment 2 Opened");
+      
+      // Request weight measurement after opening
+      weightMeasurementNeeded = true;
     } else if (cmd == "SERVO2 CLOSE" && servo2Pos != 180) {
+      servoMotionPending = true;
+      servoCompletionTime = millis() + servoOperationTimeout;
+      
       servo2.write(168.5);  // CLOSE position (higher angle)
       servo2Pos = 180;
       dispensePending = true;
       lastServoActionTime = millis();
       Serial.println("Compartment 2 Closed");
+      
+      // Reset servo motion pending after operation completes
+      servoCompletionTime = millis();
+      servoMotionPending = false;
     }
 
     // Servo 3
     if (cmd == "SERVO3 OPEN" && servo3Pos != 0) {
+      servoMotionPending = true;
+      servoCompletionTime = millis() + servoOperationTimeout;
+      
       servo3.write(10);  // OPEN position (lower angle)
       servo3Pos = 0;
       dispensePending = true;
       lastServoActionTime = millis();
       Serial.println("Compartment 3 Opened");
+      
+      // Request weight measurement after opening
+      weightMeasurementNeeded = true;
     } else if (cmd == "SERVO3 CLOSE" && servo3Pos != 180) {
+      servoMotionPending = true;
+      servoCompletionTime = millis() + servoOperationTimeout;
+      
       servo3.write(175);  // CLOSE position (higher angle)
       servo3Pos = 180;
       dispensePending = true;
       lastServoActionTime = millis();
       Serial.println("Compartment 3 Closed");
+      
+      // Reset servo motion pending after operation completes
+      servoCompletionTime = millis();
+      servoMotionPending = false;
     }
     
     // Vibration Motor
@@ -548,6 +667,229 @@ void alertScheduleDue() {
     delay(300);
   }
 }
+// Measure weight after servo operation
+void measureWeightAfterServo() {
+  if (!weightMeasurementNeeded) return;
+  
+  // Check if enough time has passed for the pill to settle after servo movement
+  if (millis() - servoCompletionTime >= servoSettlingTime) {
+    // Take weight measurement
+    float weight_mg = getFilteredWeight();
+    Serial.printf("Post-dispense weight: %.2f mg\n", weight_mg);
+    
+    if (deviceConnected) {
+      char buf[48];
+      snprintf(buf, sizeof(buf), "POST_DISPENSE_WEIGHT: %.2f mg", weight_mg);
+      pTxCharacteristic->setValue(buf);
+      pTxCharacteristic->notify();
+    }
+    
+    weightMeasurementNeeded = false;
+  }
+}
+// Calibrate scale using a known weight
+void calibrateScale(float knownWeightMg) {
+  if (knownWeightMg <= 0) {
+    Serial.println("Error: Calibration weight must be greater than 0");
+    return;
+  }
+  
+  // First tare to ensure zero baseline
+  Serial.println("Taring scale...");
+  scale.tare(20);
+  delay(1000);
+  
+  // Ask user to place the known weight
+  Serial.printf("Please place %0.2f mg reference weight on the scale\n", knownWeightMg);
+  
+  if (deviceConnected) {
+    char buf[64];
+    snprintf(buf, sizeof(buf), "PLACE_WEIGHT: %.2f mg", knownWeightMg);
+    pTxCharacteristic->setValue(buf);
+    pTxCharacteristic->notify();
+  }
+  
+  // Wait for weight to be placed
+  delay(5000);
+  
+  // Take reading with raw values
+  calibrationReading = scale.read_average(30);  // Very high sample count for calibration
+  
+  // Calculate and set the new calibration factor
+  // formula: calibrationFactor = calibrationReading / knownWeightMg
+  if (calibrationReading != 0) {
+    calibrationFactor = (float)calibrationReading / knownWeightMg;
+    scale.set_scale(calibrationFactor);
+    
+    Serial.printf("Calibration complete! New factor: %f\n", calibrationFactor);
+    calibrationWeight = knownWeightMg;
+    
+    if (deviceConnected) {
+      char buf[64];
+      snprintf(buf, sizeof(buf), "CALIBRATED: %.6f", calibrationFactor);
+      pTxCharacteristic->setValue(buf);
+      pTxCharacteristic->notify();
+    }
+  } else {
+    Serial.println("Calibration failed: zero reading");
+    if (deviceConnected) {
+      pTxCharacteristic->setValue("CALIBRATION_FAILED: Zero reading");
+      pTxCharacteristic->notify();
+    }
+  }
+}
+// Auto-calibrate the scale using a known weight
+void startAutoCalibration(float knownWeightMilligrams) {
+  if (knownWeightMilligrams <= 0) {
+    Serial.println("Error: Calibration weight must be greater than 0");
+    
+    if (deviceConnected) {
+      pTxCharacteristic->setValue("CALIBRATION_FAILED: Invalid weight");
+      pTxCharacteristic->notify();
+    }
+    return;
+  }
+  
+  // Store the known weight
+  knownWeightMg = knownWeightMilligrams;
+  
+  // Initialize calibration sequence
+  isAutoCalibrating = true;
+  calibrationStep = 0;
+  calibrationStartTime = millis();
+  
+  // Log start of calibration
+  Serial.println("Starting automatic calibration sequence...");
+  Serial.println("Step 1: Taring scale - remove all weight");
+  
+  if (deviceConnected) {
+    pTxCharacteristic->setValue("AUTO_CAL_START: Remove all weight from scale");
+    pTxCharacteristic->notify();
+  }
+}
+void updateAutoCalibration() {
+  if (!isAutoCalibrating) {
+    return;
+  }
+  
+  // State machine for the calibration process
+  switch (calibrationStep) {
+    case 0: // Initial delay (3 seconds to remove any weight)
+      if (millis() - calibrationStartTime >= 3000) {
+        // Tare the scale
+        scale.tare(20);
+        Serial.println("Scale tared");
+        
+        if (deviceConnected) {
+          pTxCharacteristic->setValue("AUTO_CAL_TARED: Scale zeroed");
+          pTxCharacteristic->notify();
+        }
+        
+        // Advance to next step
+        calibrationStep = 1;
+        calibrationStartTime = millis();
+        
+        // Prompt user to place weight
+        Serial.printf("Step 2: Place your %.1f mg weight on the scale\n", knownWeightMg);
+        
+        if (deviceConnected) {
+          char buf[64];
+          snprintf(buf, sizeof(buf), "AUTO_CAL_PLACE_WEIGHT: %.1f mg", knownWeightMg);
+          pTxCharacteristic->setValue(buf);
+          pTxCharacteristic->notify();
+        }
+      }
+      break;
+      
+    case 1: // Wait for user to place weight (10 seconds)
+      if (millis() - calibrationStartTime >= 10000) {
+        // Read raw value from scale with high sample count
+        calibrationReading = scale.read_average(30);
+        
+        // Calculate calibration factor (raw reading / known weight in mg)
+        if (calibrationReading != 0 && knownWeightMg != 0) {
+          calibrationFactor = (float)calibrationReading / knownWeightMg;
+          
+          // Set the new calibration factor
+          scale.set_scale(calibrationFactor);
+          
+          Serial.printf("Raw reading for %.1f mg: %ld\n", knownWeightMg, calibrationReading);
+          Serial.printf("Calculated calibration factor: %.6f\n", calibrationFactor);
+          
+          if (deviceConnected) {
+            char buf[64];
+            snprintf(buf, sizeof(buf), "AUTO_CAL_FACTOR: %.6f", calibrationFactor);
+            pTxCharacteristic->setValue(buf);
+            pTxCharacteristic->notify();
+          }
+          
+          // Store calibration weight
+          calibrationWeight = knownWeightMg;
+          
+          // Advance to testing step
+          calibrationStep = 2;
+          calibrationStartTime = millis();
+          
+          Serial.println("Step 3: Testing calibration...");
+        } else {
+          // Calibration failed
+          Serial.println("Calibration failed: Invalid readings");
+          
+          if (deviceConnected) {
+            pTxCharacteristic->setValue("CALIBRATION_FAILED: Invalid readings");
+            pTxCharacteristic->notify();
+          }
+          
+          isAutoCalibrating = false;
+        }
+      }
+      break;
+      
+    case 2: // Test the calibration by taking a reading
+      if (millis() - calibrationStartTime >= 2000) {
+        // Take a measurement with the new calibration
+        float weight_mg = getFilteredWeight();
+        
+        Serial.printf("Test reading: %.2f mg (should be close to %.1f mg)\n", weight_mg, knownWeightMg);
+        
+        if (deviceConnected) {
+          char buf[64];
+          snprintf(buf, sizeof(buf), "AUTO_CAL_TEST: %.2f mg", weight_mg);
+          pTxCharacteristic->setValue(buf);
+          pTxCharacteristic->notify();
+        }
+        
+        // Compare expected vs actual (within 10% tolerance)
+        float percentError = abs(weight_mg - knownWeightMg) / knownWeightMg * 100.0;
+        if (percentError <= 10.0) {
+          Serial.println("Calibration successful!");
+          if (deviceConnected) {
+            pTxCharacteristic->setValue("AUTO_CAL_SUCCESS: Calibration completed");
+            pTxCharacteristic->notify();
+          }
+        } else {
+          Serial.printf("Warning: Calibration error of %.1f%% is high\n", percentError);
+          if (deviceConnected) {
+            char buf[64];
+            snprintf(buf, sizeof(buf), "AUTO_CAL_WARNING: Error %.1f%%", percentError);
+            pTxCharacteristic->setValue(buf);
+            pTxCharacteristic->notify();
+          }
+        }
+        
+        // Prompt to remove calibration weight
+        Serial.println("Calibration complete. You can now remove the calibration weight.");
+        if (deviceConnected) {
+          pTxCharacteristic->setValue("AUTO_CAL_COMPLETE: Remove calibration weight");
+          pTxCharacteristic->notify();
+        }
+        
+        // End calibration sequence
+        isAutoCalibrating = false;
+      }
+      break;
+  }
+}
 void setup() {
   Serial.begin(115200);
   Serial.println("Starting Smart Pill Dispenser BLE App...");
@@ -610,8 +952,11 @@ void setup() {
     }
   } else {
     Serial.println("HX711 connected.");
-    scale.set_scale(420.0983);
-    scale.tare();
+    // Ultra-sensitive configuration for milligram detection
+    // Extremely low calibration factor for mg-level sensitivity
+    // Note: This may introduce noise that requires filtering
+    scale.set_scale(0.5);  // Ultra-sensitive setting for mg detection
+    scale.tare(20);  // Tare with more samples for stability
   }
   
   // Initialize RTC with a default time
@@ -663,6 +1008,16 @@ void loop() {
       bluetooth_LED_State = !bluetooth_LED_State;
       digitalWrite(bluetooth_LED, bluetooth_LED_State ? HIGH : LOW);
     }
+  }
+  
+  // Update auto-calibration if in progress
+  if (isAutoCalibrating) {
+    updateAutoCalibration();
+  }
+  
+  // Check if weight measurement is needed after servo operation
+  if (weightMeasurementNeeded) {
+    measureWeightAfterServo();
   }
   
   // Check for dispense completion
@@ -721,15 +1076,15 @@ void loop() {
     }
   }
   
-  // Weight measurements
-  if (millis() - lastWeightUpdate >= weightInterval) {
+  // Weight measurements - only performed if not already measuring post-servo weight
+  if (!weightMeasurementNeeded && millis() - lastWeightUpdate >= weightInterval) {
     lastWeightUpdate = millis();
     if (scale.wait_ready_timeout(500)) {
-      float weight = scale.get_units(5);
-      Serial.printf("Weight: %.2f g\n", weight);
+      float weight_mg = getFilteredWeight();
+      Serial.printf("Weight: %.2f mg\n", weight_mg);
       if (deviceConnected) {
         char buf[32];
-        snprintf(buf, sizeof(buf), "WEIGHT: %.2f g", weight);
+        snprintf(buf, sizeof(buf), "WEIGHT: %.2f mg", weight_mg);
         pTxCharacteristic->setValue(buf);
         pTxCharacteristic->notify();
       }

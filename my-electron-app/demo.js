@@ -16,6 +16,22 @@ const scheduleButton = document.getElementById('schedule-button');
 const formArea = document.getElementById('form-area');
 const scheduleList = document.getElementById('schedule-list');
 
+// Calibration elements
+const calibrationWeight = document.getElementById('calibration-weight');
+const calibrationStatus = document.getElementById('calibration-status');
+const tareButton = document.getElementById('tare-button');
+const calibrateButton = document.getElementById('calibrate-button');
+const autoCalButton = document.getElementById('auto-calibrate-button');
+const rawReadingButton = document.getElementById('raw-reading-button');
+const currentWeightDisplay = document.getElementById('current-weight-display');
+const postDispenseWeightDisplay = document.getElementById('post-dispense-weight');
+
+// Auto-calibration progress elements
+const calProgressContainer = document.getElementById('calibration-progress-container');
+const calProgressBar = document.getElementById('calibration-progress-bar');
+const calProgressStep = document.getElementById('calibration-progress-step');
+const calProgressInstruction = document.getElementById('calibration-progress-instruction');
+
 // Compartment info elements
 const compartmentCards = {
   1: document.getElementById('compartment1-card'),
@@ -59,6 +75,11 @@ const compartmentData = {
 // Schedule data
 let schedules = [];
 let nextScheduleId = 1;
+
+// Auto-calibration state
+let isAutoCalibrating = false;
+let autoCalibrationStep = 0;
+let autoCalibrationTimeout = null;
 
 // Check for due schedules
 function checkDueSchedules() {
@@ -161,6 +182,56 @@ scheduleButton.addEventListener('click', () => {
   showScheduleForm();
 });
 
+// Calibration buttons
+tareButton.addEventListener('click', () => {
+  sendCommand('TARE');
+  logMessage('Taring scale...', 'system');
+});
+
+calibrateButton.addEventListener('click', () => {
+  const weight = parseInt(calibrationWeight.value);
+  if (isNaN(weight) || weight <= 0) {
+    logMessage('Please enter a valid calibration weight in milligrams', 'system');
+    return;
+  }
+  
+  sendCommand(`CALIBRATE:${weight}`);
+  logMessage(`Starting calibration with ${weight}mg reference weight...`, 'system');
+  calibrationStatus.textContent = 'Calibration in progress...';
+  
+  // Disable buttons during calibration
+  tareButton.disabled = true;
+  calibrateButton.disabled = true;
+  autoCalButton.disabled = true;
+  rawReadingButton.disabled = true;
+  
+  // Re-enable after calibration should be complete (around 7 seconds)
+  setTimeout(() => {
+    if (isConnected) {
+      tareButton.disabled = false;
+      calibrateButton.disabled = false;
+      autoCalButton.disabled = false;
+      rawReadingButton.disabled = false;
+    }
+  }, 7000);
+});
+
+// Auto-calibration button
+autoCalButton.addEventListener('click', () => {
+  const weight = parseInt(calibrationWeight.value);
+  if (isNaN(weight) || weight <= 0) {
+    logMessage('Please enter a valid calibration weight in milligrams', 'system');
+    return;
+  }
+  
+  startAutoCalibration(weight);
+});
+
+rawReadingButton.addEventListener('click', () => {
+  sendCommand('RAW');
+  logMessage('Requesting raw ADC reading...', 'system');
+});
+
 // ========== IPC Event Handlers ==========
 
 // BLE status updates
@@ -253,6 +324,12 @@ window.api.onConnectionStatus((status) => {
     updateRefillButtonState();
     updateScheduleButtonState();
     
+    // Enable calibration buttons
+    tareButton.disabled = false;
+    calibrateButton.disabled = false;
+    autoCalButton.disabled = false;
+    rawReadingButton.disabled = false;
+    
     // Stop blinking and turn on bluetooth LED solid when connected
     clearInterval(ledBlinkInterval);
     sendCommand('BT_LED ON');
@@ -279,6 +356,12 @@ window.api.onConnectionStatus((status) => {
     refillButton.disabled = true;
     scheduleButton.disabled = true;
     
+    // Disable calibration buttons
+    tareButton.disabled = true;
+    calibrateButton.disabled = true;
+    autoCalButton.disabled = true;
+    rawReadingButton.disabled = true;
+    
     // Turn off the bluetooth LED when disconnected
     sendCommand('BT_LED OFF');
     
@@ -299,6 +382,16 @@ window.api.onConnectionStatus((status) => {
     // Reset any ongoing process
     if (currentProcess) {
       cancelCurrentProcess();
+    }
+    
+    // Reset weight displays
+    currentWeightDisplay.textContent = 'No data';
+    postDispenseWeightDisplay.textContent = 'Post-dispense: No data';
+    
+    // Hide calibration progress if disconnected during calibration
+    calProgressContainer.style.display = 'none';
+    if (isAutoCalibrating) {
+      finishAutoCalibration();
     }
   }
 });
@@ -326,6 +419,48 @@ window.api.onDeviceData((data) => {
     sendCommand(`SCHEDULE_DUE:${hasDueSchedules}`);
     logMessage(`Sent schedule status to device: ${hasDueSchedules ? 'Due schedules found' : 'No schedules due'}`, 'system');
     return;
+  }
+  
+  // Handle auto-calibration messages
+  if (data.startsWith('AUTO_CAL_')) {
+    processAutoCalibrationMessage(data);
+  }
+  
+  // Handle weight data 
+  if (data.startsWith('WEIGHT:')) {
+    const weight = data.split(':')[1].trim();
+    currentWeightDisplay.textContent = weight;
+  }
+  
+  // Handle post-dispense weight data
+  if (data.startsWith('POST_DISPENSE_WEIGHT:')) {
+    const weight = data.split(':')[1].trim();
+    postDispenseWeightDisplay.textContent = `Post-dispense: ${weight}`;
+  }
+  
+  // Handle calibration responses
+  if (data.startsWith('CALIBRATED:')) {
+    const factor = data.split(':')[1].trim();
+    calibrationStatus.textContent = `Calibrated (Factor: ${factor})`;
+    calibrationStatus.style.backgroundColor = '#d5f5e3'; // Light green background
+    logMessage(`Calibration successful! New calibration factor: ${factor}`, 'system');
+  }
+  
+  if (data.startsWith('CALIBRATION_FAILED:') && !isAutoCalibrating) {
+    const reason = data.split(':')[1].trim();
+    calibrationStatus.textContent = `Calibration failed: ${reason}`;
+    calibrationStatus.style.backgroundColor = '#fadbd8'; // Light red background
+    logMessage(`Calibration failed: ${reason}`, 'system');
+  }
+  
+  if (data.startsWith('PLACE_WEIGHT:') && !isAutoCalibrating) {
+    const weight = data.split(':')[1].trim();
+    logMessage(`Please place ${weight} on the scale`, 'system');
+  }
+  
+  if (data.startsWith('RAW:')) {
+    const raw = data.split(':')[1].trim();
+    logMessage(`Raw ADC reading: ${raw}`, 'system');
   }
 });
 
@@ -1392,4 +1527,130 @@ function syncSchedulesToDevice() {
     
     logMessage(`Synchronized ${schedules.length} schedules with device`, 'system');
   }, 500);
+}
+
+// Function to start auto-calibration process
+function startAutoCalibration(weightMg) {
+  // Prevent multiple calibrations
+  if (isAutoCalibrating) {
+    return;
+  }
+  
+  isAutoCalibrating = true;
+  autoCalibrationStep = 0;
+  
+  // Show the progress container
+  calProgressContainer.style.display = 'block';
+  calProgressBar.style.width = '0%';
+  calProgressStep.textContent = 'Step 1: Preparing...';
+  calProgressInstruction.textContent = 'Please remove all weight from the scale';
+  
+  // Disable buttons during calibration
+  tareButton.disabled = true;
+  calibrateButton.disabled = true;
+  autoCalButton.disabled = true;
+  rawReadingButton.disabled = true;
+  
+  // Send auto-calibration command
+  sendCommand(`AUTO_CALIBRATE:${weightMg}`);
+  logMessage(`Starting automatic calibration with ${weightMg}mg reference weight...`, 'system');
+  
+  // Set the initial progress
+  updateCalibrationProgress(0, 'Starting automatic calibration...');
+}
+
+// Process auto-calibration messages
+function processAutoCalibrationMessage(message) {
+  if (message.startsWith('AUTO_CAL_START:')) {
+    updateCalibrationProgress(10, 'Remove all weight from the scale');
+  } 
+  else if (message.startsWith('AUTO_CAL_TARED:')) {
+    autoCalibrationStep = 1;
+    updateCalibrationProgress(30, 'Scale is now zeroed');
+  } 
+  else if (message.startsWith('AUTO_CAL_PLACE_WEIGHT:')) {
+    const weight = message.split(':')[1].trim();
+    updateCalibrationProgress(40, `Place ${weight} on the scale`);
+    calProgressStep.textContent = 'Step 2: Place reference weight';
+    
+    // Show countdown for placing weight
+    let countdown = 10;
+    const countdownInterval = setInterval(() => {
+      calProgressInstruction.textContent = `Place ${weight} on the scale (${countdown}s)`;
+      countdown--;
+      
+      if (countdown < 0) {
+        clearInterval(countdownInterval);
+      }
+    }, 1000);
+  } 
+  else if (message.startsWith('AUTO_CAL_FACTOR:')) {
+    autoCalibrationStep = 2;
+    const factor = message.split(':')[1].trim();
+    updateCalibrationProgress(70, `Calibration factor: ${factor}`);
+    calProgressStep.textContent = 'Step 3: Testing calibration';
+  } 
+  else if (message.startsWith('AUTO_CAL_TEST:')) {
+    const weight = message.split(':')[1].trim();
+    updateCalibrationProgress(80, `Test reading: ${weight}`);
+  } 
+  else if (message.startsWith('AUTO_CAL_SUCCESS:')) {
+    updateCalibrationProgress(100, 'Calibration successful!');
+    calibrationStatus.textContent = 'Calibration Successful';
+    calibrationStatus.style.backgroundColor = '#d5f5e3'; // Light green
+    
+    // Hide progress bar after 3 seconds
+    setTimeout(() => {
+      if (isConnected) {
+        calProgressContainer.style.display = 'none';
+      }
+    }, 3000);
+    
+    finishAutoCalibration();
+  } 
+  else if (message.startsWith('AUTO_CAL_WARNING:')) {
+    const error = message.split(':')[1].trim();
+    updateCalibrationProgress(100, `Warning: ${error}`);
+    calibrationStatus.textContent = 'Calibrated with warnings';
+    calibrationStatus.style.backgroundColor = '#fdebd0'; // Light orange
+    
+    finishAutoCalibration();
+  } 
+  else if (message.startsWith('AUTO_CAL_COMPLETE:')) {
+    updateCalibrationProgress(100, 'You can now remove the calibration weight');
+    
+    finishAutoCalibration();
+  }
+  else if (message.startsWith('CALIBRATION_FAILED:')) {
+    const reason = message.split(':')[1].trim();
+    updateCalibrationProgress(100, `Calibration failed: ${reason}`);
+    calibrationStatus.textContent = `Calibration failed: ${reason}`;
+    calibrationStatus.style.backgroundColor = '#fadbd8'; // Light red
+    
+    finishAutoCalibration();
+  }
+}
+
+// Update progress bar and instructions
+function updateCalibrationProgress(percent, instruction) {
+  calProgressBar.style.width = `${percent}%`;
+  calProgressInstruction.textContent = instruction;
+}
+
+// Finish auto-calibration and clean up
+function finishAutoCalibration() {
+  isAutoCalibrating = false;
+  
+  // Re-enable buttons
+  if (isConnected) {
+    tareButton.disabled = false;
+    calibrateButton.disabled = false;
+    autoCalButton.disabled = false;
+    rawReadingButton.disabled = false;
+  }
+  
+  // Clear any pending timeouts
+  if (autoCalibrationTimeout) {
+    clearTimeout(autoCalibrationTimeout);
+  }
 } 

@@ -75,6 +75,37 @@
       <!-- Dynamic form area - will be populated by JavaScript -->
       <div id="form-area" class="form-area"></div>
       
+      <!-- Scale Calibration section -->
+      <div class="calibration-section">
+        <h3>Scale Calibration</h3>
+        <p class="calibration-info">Calibrate the load cell with a known reference weight to ensure accurate milligram readings.</p>
+        <div class="calibration-form">
+          <div class="form-group">
+            <label for="calibration-weight">Reference Weight (mg):</label>
+            <input type="number" id="calibration-weight" class="form-control" min="1" value="500" placeholder="Weight in milligrams">
+          </div>
+          <div class="calibration-status" id="calibration-status">Not calibrated</div>
+          <div class="calibration-buttons">
+            <button id="tare-button" class="calibration-button" disabled>Tare Scale</button>
+            <button id="calibrate-button" class="calibration-button" disabled>Calibrate</button>
+            <button id="auto-calibrate-button" class="calibration-button auto-calibrate" disabled>Auto Calibration</button>
+            <button id="raw-reading-button" class="calibration-button" disabled>Raw Reading</button>
+          </div>
+        </div>
+        <div class="calibration-progress" id="calibration-progress-container" style="display: none;">
+          <div class="progress-bar-container">
+            <div class="progress-bar" id="calibration-progress-bar"></div>
+          </div>
+          <div class="progress-step" id="calibration-progress-step">Step 1: Preparing...</div>
+          <div class="progress-instruction" id="calibration-progress-instruction"></div>
+        </div>
+        <div class="current-weight">
+          <h4>Current Weight</h4>
+          <div id="current-weight-display" class="weight-value">No data</div>
+          <div id="post-dispense-weight" class="post-dispense-value">Post-dispense: No data</div>
+        </div>
+      </div>
+      
       <!-- Schedule display section -->
       <div class="schedule-section">
         <h3>Scheduled Medications</h3>
