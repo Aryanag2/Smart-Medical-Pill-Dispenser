@@ -47,7 +47,7 @@ const unsigned long weightInterval = 5000;  // 5 s
 struct tm timeinfo;
 bool timeIsSynchronized = false;
 unsigned long lastTimeCheck = 0;
-const unsigned long timeCheckInterval = 60000;  // Check schedules every minute
+const unsigned long timeCheckInterval = 2000;  // Check schedules every 2 seconds
 // ----- Schedule Management -----
 bool hasDueSchedules = false;
 unsigned long blinkInterval = 0;
@@ -71,6 +71,12 @@ void saveSchedules();
 void loadSchedules();
 bool checkSchedulesDue();
 void alertScheduleDue();
+// ----- Dispense Tracking -----
+bool dispensePending = false;
+unsigned long lastServoActionTime = 0;
+const unsigned long servoCompletionTimeout = 3000; // 3 seconds after servo action to turn off LEDs
+unsigned long lastDispenseCheck = 0;
+const unsigned long dispenseCheckInterval = 2000; // Check dispense completion every 2 seconds
 // ----- BLE Server Callbacks -----
 class MyServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer* pServer) override {
@@ -287,10 +293,14 @@ class MyCallbacks : public BLECharacteristicCallbacks {
     if (cmd == "SERVO1 OPEN" && servo1Pos != 0) {
       servo1.write(10);  // OPEN position (lower angle)
       servo1Pos = 0;
+      dispensePending = true;
+      lastServoActionTime = millis();
       Serial.println("Compartment 1 Opened");
     } else if (cmd == "SERVO1 CLOSE" && servo1Pos != 180) {
       servo1.write(175);  // CLOSE position (higher angle)
       servo1Pos = 180;
+      dispensePending = true;
+      lastServoActionTime = millis();
       Serial.println("Compartment 1 Closed");
     }
 
@@ -298,10 +308,14 @@ class MyCallbacks : public BLECharacteristicCallbacks {
     if (cmd == "SERVO2 OPEN" && servo2Pos != 0) {
       servo2.write(10);  // OPEN position (lower angle)
       servo2Pos = 0;
+      dispensePending = true;
+      lastServoActionTime = millis();
       Serial.println("Compartment 2 Opened");
     } else if (cmd == "SERVO2 CLOSE" && servo2Pos != 180) {
       servo2.write(168.5);  // CLOSE position (higher angle)
       servo2Pos = 180;
+      dispensePending = true;
+      lastServoActionTime = millis();
       Serial.println("Compartment 2 Closed");
     }
 
@@ -309,10 +323,14 @@ class MyCallbacks : public BLECharacteristicCallbacks {
     if (cmd == "SERVO3 OPEN" && servo3Pos != 0) {
       servo3.write(10);  // OPEN position (lower angle)
       servo3Pos = 0;
+      dispensePending = true;
+      lastServoActionTime = millis();
       Serial.println("Compartment 3 Opened");
     } else if (cmd == "SERVO3 CLOSE" && servo3Pos != 180) {
       servo3.write(175);  // CLOSE position (higher angle)
       servo3Pos = 180;
+      dispensePending = true;
+      lastServoActionTime = millis();
       Serial.println("Compartment 3 Closed");
     }
     
@@ -647,16 +665,29 @@ void loop() {
     }
   }
   
-  // Check time and schedules
+  // Check for dispense completion
   unsigned long currentMillis = millis();
+  if (dispensePending && (currentMillis - lastDispenseCheck >= dispenseCheckInterval)) {
+    lastDispenseCheck = currentMillis;
+    
+    // If it's been more than servoCompletionTimeout since last servo action
+    if (currentMillis - lastServoActionTime >= servoCompletionTimeout) {
+      // Turn off all compartment LEDs
+      digitalWrite(compartment1_LED, LOW);
+      digitalWrite(compartment2_LED, LOW);
+      digitalWrite(compartment3_LED, LOW);
+      Serial.println("Dispense completed, LEDs turned off");
+      dispensePending = false;
+    }
+  }
   
-  // Check every minute if we have due schedules
+  // Check time and schedules
   if (currentMillis - lastTimeCheck >= timeCheckInterval) {
     lastTimeCheck = currentMillis;
     
     if (timeIsSynchronized) {
       // Increment seconds and handle time overflow
-      timeinfo.tm_sec += 60;  // Add one minute
+      timeinfo.tm_sec += 2;  // Add two seconds
       mktime(&timeinfo);  // Normalize the time
       
       if (deviceConnected) {
