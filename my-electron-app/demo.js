@@ -51,9 +51,9 @@ let ledBlinkInterval = null; // Track LED blinking interval
 
 // Pill inventory data
 const compartmentData = {
-  1: { filled: false, pillName: '', pillCount: 0, pillWeight: 0 },
-  2: { filled: false, pillName: '', pillCount: 0, pillWeight: 0 },
-  3: { filled: false, pillName: '', pillCount: 0, pillWeight: 0 }
+  1: { filled: false, pillName: '', pillCount: 0, pillWeight: 0, maxPillCount: 0 },
+  2: { filled: false, pillName: '', pillCount: 0, pillWeight: 0, maxPillCount: 0 },
+  3: { filled: false, pillName: '', pillCount: 0, pillWeight: 0, maxPillCount: 0 }
 };
 
 // Schedule data
@@ -389,9 +389,24 @@ function updateCompartmentDisplay(compartmentNumber) {
   card.className = 'compartment-card';
   if (data.filled) {
     card.classList.add('filled');
-    // If less than 25% of pills remain, mark as low
-    if (data.pillCount <= 5) {
+    // Calculate threshold - either 2 pills minimum or 10% of max, whichever is greater
+    const minPillThreshold = 2;
+    const percentThreshold = Math.floor(data.maxPillCount * 0.1);
+    const lowThreshold = Math.max(minPillThreshold, percentThreshold);
+    
+    // Apply 'low' class if pills are at or below the threshold
+    if (data.pillCount === 0 || data.pillCount <= lowThreshold) {
       card.classList.add('low');
+      
+      // Turn on refill LED if pills are low
+      if (isConnected && data.pillCount > 0) {
+        sendCommand('REFILL_LED ON');
+      }
+    } else {
+      // Turn off refill LED when no compartments are low
+      if (isConnected && !isCompartmentLow()) {
+        sendCommand('REFILL_LED OFF');
+      }
     }
   } else {
     card.classList.add('empty');
@@ -407,6 +422,23 @@ function updateCompartmentDisplay(compartmentNumber) {
     count.textContent = '';
     weight.textContent = '';
   }
+}
+
+// Helper to check if any compartment is low on pills but not empty
+function isCompartmentLow() {
+  for (let i = 1; i <= 3; i++) {
+    const data = compartmentData[i];
+    if (data.filled && data.pillCount > 0) {
+      const minPillThreshold = 2;
+      const percentThreshold = Math.floor(data.maxPillCount * 0.1);
+      const lowThreshold = Math.max(minPillThreshold, percentThreshold);
+      
+      if (data.pillCount <= lowThreshold) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 // Update the state of the refill button based on compartment status
@@ -552,7 +584,8 @@ function completeFilling(compartmentNumber, pillName, pillCount, pillWeight) {
         filled: true,
         pillName,
         pillCount,
-        pillWeight
+        pillWeight,
+        maxPillCount: pillCount // Store the initial max pill count
       };
       
       // Update display
@@ -651,13 +684,15 @@ function beginRefilling(compartmentNumber, additionalPills) {
   
   formArea.innerHTML = processingHTML;
   
-  // Light up the corresponding compartment LED
+  // Light up the corresponding compartment LED and refill LED
   sendCommand(`COMP${compartmentNumber}_LED ON`);
+  sendCommand(`REFILL_LED ON`);
   logMessage(`Beginning refilling process for Compartment ${compartmentNumber}`, 'system');
   
   // Add event listeners
   document.getElementById('cancel-refilling').addEventListener('click', () => {
     sendCommand(`COMP${compartmentNumber}_LED OFF`);
+    sendCommand(`REFILL_LED OFF`);
     cancelCurrentProcess();
   });
   
@@ -671,8 +706,16 @@ function completeRefilling(compartmentNumber, additionalPills) {
   // Blink LED twice and then turn off
   blinkCompartmentLED(compartmentNumber, 2)
     .then(() => {
+      // Turn off refill LED
+      sendCommand(`REFILL_LED OFF`);
+      
       // Update compartment data
       compartmentData[compartmentNumber].pillCount += additionalPills;
+      
+      // Update max pill count if the new count is higher
+      if (compartmentData[compartmentNumber].pillCount > compartmentData[compartmentNumber].maxPillCount) {
+        compartmentData[compartmentNumber].maxPillCount = compartmentData[compartmentNumber].pillCount;
+      }
       
       // Update display
       updateCompartmentDisplay(compartmentNumber);
@@ -1057,6 +1100,17 @@ function deleteSchedule(id) {
   }
 }
 
+// Update the status of refill LED based on current pill counts across all compartments
+function updateRefillLEDStatus() {
+  if (isConnected) {
+    if (isCompartmentLow()) {
+      sendCommand('REFILL_LED ON');
+    } else {
+      sendCommand('REFILL_LED OFF');
+    }
+  }
+}
+
 // Activate a schedule (simulate medication dispense)
 async function activateSchedule(id) {
   // Don't allow activation if not connected
@@ -1124,6 +1178,9 @@ async function activateSchedule(id) {
         
         // Update compartment display
         updateCompartmentDisplay(compartmentNum);
+        
+        // Check refill status after each pill dispensed
+        updateRefillLEDStatus();
       }
       
       // Check if compartment is now empty
@@ -1133,6 +1190,9 @@ async function activateSchedule(id) {
         logMessage(`Compartment ${compartmentNum} is now empty`, 'system');
       }
     }
+    
+    // Immediately check refill status after dispensing completes
+    updateRefillLEDStatus();
     
     // Update schedule with last dispensed time
     schedule.lastDispensed = new Date();
@@ -1224,6 +1284,11 @@ function cancelCurrentProcess() {
   if (activeCompartment) {
     sendCommand(`COMP${activeCompartment}_LED OFF`);
     activeCompartment = null;
+  }
+  
+  // Always turn off the refill LED when canceling any process
+  if (currentProcess === 'refill') {
+    sendCommand(`REFILL_LED OFF`);
   }
   
   currentProcess = null;
