@@ -1,22 +1,18 @@
-// DOM Elements - Connection controls (shared with main page)
 const scanButton = document.getElementById('scan-button');
 const stopScanButton = document.getElementById('stop-scan-button');
 const disconnectButton = document.getElementById('disconnect-button');
 const devicesList = document.getElementById('devices-list').querySelector('.devices-list-content');
 
-// Status elements
 const bleStatus = document.getElementById('ble-status');
 const connectionStatus = document.getElementById('connection-status');
 const demoMessages = document.getElementById('demo-messages');
 
-// Demo-specific elements
 const fillButton = document.getElementById('fill-button');
 const refillButton = document.getElementById('refill-button');
 const scheduleButton = document.getElementById('schedule-button');
 const formArea = document.getElementById('form-area');
 const scheduleList = document.getElementById('schedule-list');
 
-// Calibration elements
 const calibrationWeight = document.getElementById('calibration-weight');
 const calibrationStatus = document.getElementById('calibration-status');
 const tareButton = document.getElementById('tare-button');
@@ -26,13 +22,11 @@ const rawReadingButton = document.getElementById('raw-reading-button');
 const currentWeightDisplay = document.getElementById('current-weight-display');
 const postDispenseWeightDisplay = document.getElementById('post-dispense-weight');
 
-// Auto-calibration progress elements
 const calProgressContainer = document.getElementById('calibration-progress-container');
 const calProgressBar = document.getElementById('calibration-progress-bar');
 const calProgressStep = document.getElementById('calibration-progress-step');
 const calProgressInstruction = document.getElementById('calibration-progress-instruction');
 
-// Compartment info elements
 const compartmentCards = {
   1: document.getElementById('compartment1-card'),
   2: document.getElementById('compartment2-card'),
@@ -57,59 +51,48 @@ const compartmentWeights = {
   3: document.getElementById('compartment3-weight')
 };
 
-// State tracking
 let isConnected = false;
 let isScanning = false;
-let currentProcess = null; // 'fill', 'refill', or 'schedule'
+let currentProcess = null; 
 let activeCompartment = null;
 let selectedMedications = [];
-let ledBlinkInterval = null; // Track LED blinking interval
+let ledBlinkInterval = null; 
 
-// Pill inventory data
 const compartmentData = {
   1: { filled: false, pillName: '', pillCount: 0, pillWeight: 0, maxPillCount: 0 },
   2: { filled: false, pillName: '', pillCount: 0, pillWeight: 0, maxPillCount: 0 },
   3: { filled: false, pillName: '', pillCount: 0, pillWeight: 0, maxPillCount: 0 }
 };
 
-// Schedule data
 let schedules = [];
 let nextScheduleId = 1;
 
-// Auto-calibration state
 let isAutoCalibrating = false;
 let autoCalibrationStep = 0;
 let autoCalibrationTimeout = null;
 
-// Check for due schedules
 function checkDueSchedules() {
   const now = new Date();
   
-  // Find schedules that are due
   const dueSchedules = schedules.filter(schedule => {
     const scheduleTime = new Date(schedule.datetime);
-    // Check if the scheduled time is in the past
     return scheduleTime <= now;
   });
   
   if (dueSchedules.length > 0) {
-    // Light up all compartment LEDs to signal it's time to take medication
     for (let i = 1; i <= 3; i++) {
       sendCommand(`COMP${i}_LED ON`);
     }
     
-    // Update UI to show due schedules
     dueSchedules.forEach(schedule => {
       logMessage(`It's time for "${schedule.name}" medication!`, 'system');
       
-      // Find the schedule item in the DOM and highlight it
       const scheduleItem = document.querySelector(`.schedule-item[data-id="${schedule.id}"]`);
       if (scheduleItem) {
         scheduleItem.classList.add('due');
       }
     });
     
-    // Notify the device that schedules are due
     if (isConnected) {
       sendCommand('SCHEDULE_DUE:true');
     }
@@ -120,22 +103,17 @@ function checkDueSchedules() {
   return false;
 }
 
-// Set up interval to check for due schedules
 let scheduleCheckInterval;
 
-// Start schedule checking
 function startScheduleChecking() {
   if (!scheduleCheckInterval) {
-    // Check immediately and then every minute
     const hasDueSchedules = checkDueSchedules();
-    // Initial notification to device
     if (isConnected) {
       sendCommand(`SCHEDULE_DUE:${hasDueSchedules}`);
     }
     
     scheduleCheckInterval = setInterval(() => {
       const hasDueSchedules = checkDueSchedules();
-      // Only send updates when connected
       if (isConnected) {
         sendCommand(`SCHEDULE_DUE:${hasDueSchedules}`);
       }
@@ -143,7 +121,6 @@ function startScheduleChecking() {
   }
 }
 
-// Stop schedule checking
 function stopScheduleChecking() {
   if (scheduleCheckInterval) {
     clearInterval(scheduleCheckInterval);
@@ -151,9 +128,7 @@ function stopScheduleChecking() {
   }
 }
 
-// ========== Event Listeners ==========
 
-// Scanning
 scanButton.addEventListener('click', () => {
   startScanning();
 });
@@ -162,27 +137,22 @@ stopScanButton.addEventListener('click', () => {
   stopScanning();
 });
 
-// Disconnect
 disconnectButton.addEventListener('click', () => {
   disconnectDevice();
 });
 
-// Fill button
 fillButton.addEventListener('click', () => {
   showFillForm();
 });
 
-// Refill button
 refillButton.addEventListener('click', () => {
   showRefillForm();
 });
 
-// Schedule button
 scheduleButton.addEventListener('click', () => {
   showScheduleForm();
 });
 
-// Calibration buttons
 tareButton.addEventListener('click', () => {
   sendCommand('TARE');
   logMessage('Taring scale...', 'system');
@@ -199,13 +169,11 @@ calibrateButton.addEventListener('click', () => {
   logMessage(`Starting calibration with ${weight}mg reference weight...`, 'system');
   calibrationStatus.textContent = 'Calibration in progress...';
   
-  // Disable buttons during calibration
   tareButton.disabled = true;
   calibrateButton.disabled = true;
   autoCalButton.disabled = true;
   rawReadingButton.disabled = true;
   
-  // Re-enable after calibration should be complete (around 7 seconds)
   setTimeout(() => {
     if (isConnected) {
       tareButton.disabled = false;
@@ -216,7 +184,6 @@ calibrateButton.addEventListener('click', () => {
   }, 7000);
 });
 
-// Auto-calibration button
 autoCalButton.addEventListener('click', () => {
   const weight = parseInt(calibrationWeight.value);
   if (isNaN(weight) || weight <= 0) {
@@ -232,15 +199,12 @@ rawReadingButton.addEventListener('click', () => {
   logMessage('Requesting raw ADC reading...', 'system');
 });
 
-// ========== IPC Event Handlers ==========
 
-// BLE status updates
 window.api.onBleStatus((status) => {
   bleStatus.textContent = `Bluetooth: ${status}`;
   logMessage(`Bluetooth status: ${status}`, 'system');
 });
 
-// Scanning status updates
 window.api.onScanningStatus((status) => {
   isScanning = status;
   scanButton.disabled = status;
@@ -248,15 +212,12 @@ window.api.onScanningStatus((status) => {
   
   if (status) {
     logMessage('Scanning for devices...', 'system');
-    // Clear previous devices list
     devicesList.innerHTML = '<p class="scanning">Scanning for devices...</p>';
     
-    // Start blinking the bluetooth LED during scanning
     startLedBlinking();
   } else {
     logMessage('Stopped scanning', 'system');
     
-    // Stop LED blinking if not connected
     if (!isConnected) {
       sendCommand('BT_LED OFF');
     }
@@ -267,29 +228,23 @@ window.api.onScanningStatus((status) => {
   }
 });
 
-// Device found
 window.api.onDeviceFound((device) => {
-  // Remove "scanning" message if it exists
   const scanningMsg = devicesList.querySelector('.scanning');
   if (scanningMsg) {
     devicesList.removeChild(scanningMsg);
   }
   
-  // Check if device is already in the list
   const existingDevice = devicesList.querySelector(`[data-id="${device.id}"]`);
   if (existingDevice) {
-    // Update RSSI
     existingDevice.querySelector('.device-rssi').textContent = `Signal: ${device.rssi} dB`;
     return;
   }
   
-  // Remove "no devices" message if it exists
   const noDevicesMsg = devicesList.querySelector('.no-devices');
   if (noDevicesMsg) {
     devicesList.removeChild(noDevicesMsg);
   }
   
-  // Create device item
   const deviceItem = document.createElement('div');
   deviceItem.className = 'device-item';
   deviceItem.dataset.id = device.id;
@@ -302,7 +257,6 @@ window.api.onDeviceFound((device) => {
     <button class="device-connect">Connect</button>
   `;
   
-  // Add connect button handler
   deviceItem.querySelector('.device-connect').addEventListener('click', async () => {
     connectToDevice(device.id);
   });
@@ -311,12 +265,10 @@ window.api.onDeviceFound((device) => {
   logMessage(`Found device: ${device.name}`, 'system');
 });
 
-// Connection status updates
 window.api.onConnectionStatus((status) => {
   connectionStatus.textContent = `Device: ${status}`;
   logMessage(`Connection status: ${status}`, 'system');
   
-  // Update UI based on connection status
   if (status === 'Connected') {
     isConnected = true;
     disconnectButton.disabled = false;
@@ -324,30 +276,23 @@ window.api.onConnectionStatus((status) => {
     updateRefillButtonState();
     updateScheduleButtonState();
     
-    // Enable calibration buttons
     tareButton.disabled = false;
     calibrateButton.disabled = false;
     autoCalButton.disabled = false;
     rawReadingButton.disabled = false;
     
-    // Stop blinking and turn on bluetooth LED solid when connected
     clearInterval(ledBlinkInterval);
     sendCommand('BT_LED ON');
     
-    // Sync time with the device
     sendTimeToDevice();
     
-    // Disable scanning when connected
     scanButton.disabled = true;
     stopScanButton.disabled = true;
     
-    // Clear device list and show connected message
     devicesList.innerHTML = '<p class="connected-message">Connected to device. Disconnect to pair with a different device.</p>';
       
-    // Add connected status class to status bar for visual indication
     connectionStatus.classList.add('connected');
     
-    // Start checking for due schedules
     startScheduleChecking();
   } else {
     isConnected = false;
@@ -356,39 +301,30 @@ window.api.onConnectionStatus((status) => {
     refillButton.disabled = true;
     scheduleButton.disabled = true;
     
-    // Disable calibration buttons
     tareButton.disabled = true;
     calibrateButton.disabled = true;
     autoCalButton.disabled = true;
     rawReadingButton.disabled = true;
     
-    // Turn off the bluetooth LED when disconnected
     sendCommand('BT_LED OFF');
     
-    // Re-enable scanning when disconnected
     scanButton.disabled = false;
     
-    // Remove connected status
     connectionStatus.classList.remove('connected');
     
-    // Reset device list to default message
     if (!isScanning) {
       devicesList.innerHTML = '<p class="no-devices">No devices found yet. Start scanning to discover devices.</p>';
     }
     
-    // Stop checking for due schedules
     stopScheduleChecking();
     
-    // Reset any ongoing process
     if (currentProcess) {
       cancelCurrentProcess();
     }
     
-    // Reset weight displays
     currentWeightDisplay.textContent = 'No data';
     postDispenseWeightDisplay.textContent = 'Post-dispense: No data';
     
-    // Hide calibration progress if disconnected during calibration
     calProgressContainer.style.display = 'none';
     if (isAutoCalibrating) {
       finishAutoCalibration();
@@ -396,60 +332,51 @@ window.api.onConnectionStatus((status) => {
   }
 });
 
-// Device data messages
 window.api.onDeviceData((data) => {
-  // Handle different types of data from device
   logMessage(`Received: ${data}`, 'received');
   
-  // Handle requests from the device
   if (data === 'REQUEST_TIME') {
     sendTimeToDevice();
     return;
   }
   
   if (data === 'REQUEST_SCHEDULES') {
-    // Send all schedules to the device
     syncSchedulesToDevice();
     return;
   }
   
   if (data === 'CHECK_SCHEDULES') {
-    // Check if there are any due schedules and notify the device
     const hasDueSchedules = checkDueSchedules();
     sendCommand(`SCHEDULE_DUE:${hasDueSchedules}`);
     logMessage(`Sent schedule status to device: ${hasDueSchedules ? 'Due schedules found' : 'No schedules due'}`, 'system');
     return;
   }
   
-  // Handle auto-calibration messages
   if (data.startsWith('AUTO_CAL_')) {
     processAutoCalibrationMessage(data);
   }
   
-  // Handle weight data 
   if (data.startsWith('WEIGHT:')) {
     const weight = data.split(':')[1].trim();
     currentWeightDisplay.textContent = weight;
   }
   
-  // Handle post-dispense weight data
   if (data.startsWith('POST_DISPENSE_WEIGHT:')) {
     const weight = data.split(':')[1].trim();
     postDispenseWeightDisplay.textContent = `Post-dispense: ${weight}`;
   }
   
-  // Handle calibration responses
   if (data.startsWith('CALIBRATED:')) {
     const factor = data.split(':')[1].trim();
     calibrationStatus.textContent = `Calibrated (Factor: ${factor})`;
-    calibrationStatus.style.backgroundColor = '#d5f5e3'; // Light green background
+    calibrationStatus.style.backgroundColor = '#d5f5e3';
     logMessage(`Calibration successful! New calibration factor: ${factor}`, 'system');
   }
   
   if (data.startsWith('CALIBRATION_FAILED:') && !isAutoCalibrating) {
     const reason = data.split(':')[1].trim();
     calibrationStatus.textContent = `Calibration failed: ${reason}`;
-    calibrationStatus.style.backgroundColor = '#fadbd8'; // Light red background
+    calibrationStatus.style.backgroundColor = '#fadbd8'; 
     logMessage(`Calibration failed: ${reason}`, 'system');
   }
   
@@ -464,37 +391,30 @@ window.api.onDeviceData((data) => {
   }
 });
 
-// ========== Helper Functions ==========
 
-// Start BLE scanning
 function startScanning() {
   window.api.startScanning();
 }
 
-// Stop BLE scanning
 function stopScanning() {
   window.api.stopScanning();
 }
 
-// Connect to a specific device
 async function connectToDevice(deviceId) {
   logMessage('Connecting to device...', 'system');
   await window.api.connectDevice(deviceId);
 }
 
-// Disconnect from current device
 function disconnectDevice() {
   logMessage('Disconnecting...', 'system');
   window.api.disconnectDevice();
 }
 
-// Send command to device
 async function sendCommand(command) {
   logMessage(`Sending: ${command}`, 'sent');
   await window.api.sendCommand(command);
 }
 
-// Log a message to the message log
 function logMessage(message, type = 'system') {
   const messageElement = document.createElement('div');
   messageElement.className = `message ${type}`;
@@ -502,17 +422,14 @@ function logMessage(message, type = 'system') {
   
   demoMessages.appendChild(messageElement);
   
-  // Auto-scroll to bottom
   demoMessages.scrollTop = demoMessages.scrollHeight;
   
-  // Limit number of messages (keep last 100)
   const messages = demoMessages.querySelectorAll('.message');
   if (messages.length > 100) {
     demoMessages.removeChild(messages[0]);
   }
 }
 
-// Update compartment display
 function updateCompartmentDisplay(compartmentNumber) {
   const data = compartmentData[compartmentNumber];
   const card = compartmentCards[compartmentNumber];
@@ -520,25 +437,20 @@ function updateCompartmentDisplay(compartmentNumber) {
   const count = compartmentCounts[compartmentNumber];
   const weight = compartmentWeights[compartmentNumber];
   
-  // Update classes
   card.className = 'compartment-card';
   if (data.filled) {
     card.classList.add('filled');
-    // Calculate threshold - either 2 pills minimum or 10% of max, whichever is greater
     const minPillThreshold = 2;
     const percentThreshold = Math.floor(data.maxPillCount * 0.1);
     const lowThreshold = Math.max(minPillThreshold, percentThreshold);
     
-    // Apply 'low' class if pills are at or below the threshold
     if (data.pillCount === 0 || data.pillCount <= lowThreshold) {
       card.classList.add('low');
       
-      // Turn on refill LED if pills are low
       if (isConnected && data.pillCount > 0) {
         sendCommand('REFILL_LED ON');
       }
     } else {
-      // Turn off refill LED when no compartments are low
       if (isConnected && !isCompartmentLow()) {
         sendCommand('REFILL_LED OFF');
       }
@@ -547,7 +459,6 @@ function updateCompartmentDisplay(compartmentNumber) {
     card.classList.add('empty');
   }
   
-  // Update content
   if (data.filled) {
     info.textContent = data.pillName;
     count.textContent = `Pills: ${data.pillCount}`;
@@ -559,7 +470,6 @@ function updateCompartmentDisplay(compartmentNumber) {
   }
 }
 
-// Helper to check if any compartment is low on pills but not empty
 function isCompartmentLow() {
   for (let i = 1; i <= 3; i++) {
     const data = compartmentData[i];
@@ -576,27 +486,20 @@ function isCompartmentLow() {
   return false;
 }
 
-// Update the state of the refill button based on compartment status
 function updateRefillButtonState() {
-  // Enable refill button only if at least one compartment is filled
   const hasFilledCompartment = Object.values(compartmentData).some(data => data.filled);
   refillButton.disabled = !isConnected || !hasFilledCompartment;
 }
 
-// Update the state of the schedule button based on compartment status
 function updateScheduleButtonState() {
-  // Enable schedule button only if at least one compartment is filled
   const hasFilledCompartment = Object.values(compartmentData).some(data => data.filled);
   scheduleButton.disabled = !isConnected || !hasFilledCompartment;
 }
 
-// ========== Fill Compartment Process ==========
 
-// Show the fill compartment form
 function showFillForm() {
   currentProcess = 'fill';
   
-  // Get available (empty) compartments
   const availableCompartments = [];
   for (let i = 1; i <= 3; i++) {
     if (!compartmentData[i].filled) {
@@ -609,7 +512,6 @@ function showFillForm() {
     return;
   }
   
-  // Create the form HTML
   const formHTML = `
     <h3 class="form-title">Fill Compartment</h3>
     <div class="form-group">
@@ -636,11 +538,9 @@ function showFillForm() {
     </div>
   `;
   
-  // Set the form content and show it
   formArea.innerHTML = formHTML;
   formArea.classList.add('active');
   
-  // Add event listeners to the form buttons
   document.getElementById('cancel-fill').addEventListener('click', () => {
     cancelCurrentProcess();
   });
@@ -651,7 +551,6 @@ function showFillForm() {
     const pillCount = parseInt(document.getElementById('pill-count').value);
     const pillWeight = parseFloat(document.getElementById('pill-weight').value);
     
-    // Validate inputs
     if (!pillName) {
       logMessage('Please enter a pill name', 'system');
       return;
@@ -667,16 +566,13 @@ function showFillForm() {
       return;
     }
     
-    // Start the filling process
     beginFilling(compartmentNumber, pillName, pillCount, pillWeight);
   });
 }
 
-// Begin the filling process
 function beginFilling(compartmentNumber, pillName, pillCount, pillWeight) {
   activeCompartment = compartmentNumber;
   
-  // Update the form area with filling instructions
   const processingHTML = `
     <div class="filling-process">
       <h3 class="process-title">Filling Compartment ${compartmentNumber}</h3>
@@ -694,11 +590,9 @@ function beginFilling(compartmentNumber, pillName, pillCount, pillWeight) {
   
   formArea.innerHTML = processingHTML;
   
-  // Light up the corresponding compartment LED
   sendCommand(`COMP${compartmentNumber}_LED ON`);
   logMessage(`Beginning filling process for Compartment ${compartmentNumber}`, 'system');
   
-  // Add event listeners
   document.getElementById('cancel-filling').addEventListener('click', () => {
     sendCommand(`COMP${compartmentNumber}_LED OFF`);
     cancelCurrentProcess();
@@ -709,26 +603,21 @@ function beginFilling(compartmentNumber, pillName, pillCount, pillWeight) {
   });
 }
 
-// Complete the filling process
 function completeFilling(compartmentNumber, pillName, pillCount, pillWeight) {
-  // Blink LED twice and then turn off
   blinkCompartmentLED(compartmentNumber, 2)
     .then(() => {
-      // Update compartment data
       compartmentData[compartmentNumber] = {
         filled: true,
         pillName,
         pillCount,
         pillWeight,
-        maxPillCount: pillCount // Store the initial max pill count
+        maxPillCount: pillCount 
       };
       
-      // Update display
       updateCompartmentDisplay(compartmentNumber);
       updateRefillButtonState();
       updateScheduleButtonState();
       
-      // Clean up
       activeCompartment = null;
       currentProcess = null;
       formArea.innerHTML = '';
@@ -738,13 +627,10 @@ function completeFilling(compartmentNumber, pillName, pillCount, pillWeight) {
     });
 }
 
-// ========== Refill Compartment Process ==========
 
-// Show the refill compartment form
 function showRefillForm() {
   currentProcess = 'refill';
   
-  // Get filled compartments
   const filledCompartments = [];
   for (let i = 1; i <= 3; i++) {
     if (compartmentData[i].filled) {
@@ -752,7 +638,6 @@ function showRefillForm() {
     }
   }
   
-  // Create the form HTML
   const formHTML = `
     <h3 class="form-title">Refill Compartment</h3>
     <div class="form-group">
@@ -773,11 +658,9 @@ function showRefillForm() {
     </div>
   `;
   
-  // Set the form content and show it
   formArea.innerHTML = formHTML;
   formArea.classList.add('active');
   
-  // Add event listeners to the form buttons
   document.getElementById('cancel-refill').addEventListener('click', () => {
     cancelCurrentProcess();
   });
@@ -791,17 +674,14 @@ function showRefillForm() {
       return;
     }
     
-    // Start the refilling process
     beginRefilling(compartmentNumber, additionalPills);
   });
 }
 
-// Begin the refilling process
 function beginRefilling(compartmentNumber, additionalPills) {
   activeCompartment = compartmentNumber;
   const { pillName } = compartmentData[compartmentNumber];
   
-  // Update the form area with refilling instructions
   const processingHTML = `
     <div class="filling-process">
       <h3 class="process-title">Refilling Compartment ${compartmentNumber}</h3>
@@ -819,12 +699,10 @@ function beginRefilling(compartmentNumber, additionalPills) {
   
   formArea.innerHTML = processingHTML;
   
-  // Light up the corresponding compartment LED and refill LED
   sendCommand(`COMP${compartmentNumber}_LED ON`);
   sendCommand(`REFILL_LED ON`);
   logMessage(`Beginning refilling process for Compartment ${compartmentNumber}`, 'system');
   
-  // Add event listeners
   document.getElementById('cancel-refilling').addEventListener('click', () => {
     sendCommand(`COMP${compartmentNumber}_LED OFF`);
     sendCommand(`REFILL_LED OFF`);
@@ -836,26 +714,19 @@ function beginRefilling(compartmentNumber, additionalPills) {
   });
 }
 
-// Complete the refilling process
 function completeRefilling(compartmentNumber, additionalPills) {
-  // Blink LED twice and then turn off
   blinkCompartmentLED(compartmentNumber, 2)
     .then(() => {
-      // Turn off refill LED
       sendCommand(`REFILL_LED OFF`);
       
-      // Update compartment data
       compartmentData[compartmentNumber].pillCount += additionalPills;
       
-      // Update max pill count if the new count is higher
       if (compartmentData[compartmentNumber].pillCount > compartmentData[compartmentNumber].maxPillCount) {
         compartmentData[compartmentNumber].maxPillCount = compartmentData[compartmentNumber].pillCount;
       }
       
-      // Update display
       updateCompartmentDisplay(compartmentNumber);
       
-      // Clean up
       activeCompartment = null;
       currentProcess = null;
       formArea.innerHTML = '';
@@ -865,14 +736,10 @@ function completeRefilling(compartmentNumber, additionalPills) {
     });
 }
 
-// ========== Schedule Functionality ==========
-
-// Show the schedule form
 function showScheduleForm() {
   currentProcess = 'schedule';
   selectedMedications = [];
   
-  // Get available medications (from filled compartments)
   const availableMedications = [];
   for (let i = 1; i <= 3; i++) {
     if (compartmentData[i].filled) {
@@ -884,7 +751,6 @@ function showScheduleForm() {
     }
   }
   
-  // Create the form HTML
   const formHTML = `
     <h3 class="form-title">Schedule Medication</h3>
     <div class="form-group">
@@ -927,22 +793,18 @@ function showScheduleForm() {
     </div>
   `;
   
-  // Set the form content and show it
   formArea.innerHTML = formHTML;
   formArea.classList.add('active');
   
-  // Set default date to today
   const today = new Date();
   const dateInput = document.getElementById('schedule-date');
   dateInput.value = today.toISOString().split('T')[0];
   
-  // Set default time to now + 1 hour
   const nextHour = new Date(today.getTime() + 60 * 60 * 1000);
   const timeInput = document.getElementById('schedule-time');
   timeInput.value = nextHour.getHours().toString().padStart(2, '0') + ':' + 
                     nextHour.getMinutes().toString().padStart(2, '0');
   
-  // Add event listeners to the form buttons
   document.getElementById('cancel-schedule').addEventListener('click', () => {
     cancelCurrentProcess();
   });
@@ -956,7 +818,6 @@ function showScheduleForm() {
   });
 }
 
-// Add a medication to the current schedule
 function addMedicationToSchedule() {
   const medicationSelect = document.getElementById('medication-select');
   const quantityInput = document.getElementById('medication-quantity');
@@ -965,26 +826,21 @@ function addMedicationToSchedule() {
   const compartmentNum = parseInt(medicationSelect.value);
   const quantity = parseInt(quantityInput.value);
   
-  // Validate the quantity
   if (isNaN(quantity) || quantity < 1) {
     logMessage('Please enter a valid quantity', 'system');
     return;
   }
   
-  // Check if enough pills are available
   const availablePills = compartmentData[compartmentNum].pillCount;
   if (quantity > availablePills) {
     logMessage(`Not enough pills available. Only ${availablePills} ${compartmentData[compartmentNum].pillName} pills remaining.`, 'system');
     return;
   }
   
-  // Check if this medication is already in the list
   const existingMedIndex = selectedMedications.findIndex(med => med.compartment === compartmentNum);
   if (existingMedIndex !== -1) {
-    // Update the quantity
     selectedMedications[existingMedIndex].quantity += quantity;
   } else {
-    // Add new medication
     selectedMedications.push({
       compartment: compartmentNum,
       name: compartmentData[compartmentNum].pillName,
@@ -992,11 +848,9 @@ function addMedicationToSchedule() {
     });
   }
   
-  // Update the display
   updateSelectedMedicationsDisplay();
 }
 
-// Update the display of selected medications
 function updateSelectedMedicationsDisplay() {
   const selectedMedsContainer = document.getElementById('selected-medications');
   
@@ -1022,7 +876,6 @@ function updateSelectedMedicationsDisplay() {
   
   selectedMedsContainer.innerHTML = html;
   
-  // Add event listeners for quantity changes
   document.querySelectorAll('.medication-quantity').forEach(input => {
     input.addEventListener('change', (event) => {
       const index = parseInt(event.target.dataset.index);
@@ -1031,7 +884,6 @@ function updateSelectedMedicationsDisplay() {
     });
   });
   
-  // Add event listeners for remove buttons
   document.querySelectorAll('.remove-medication').forEach(button => {
     button.addEventListener('click', (event) => {
       const index = parseInt(event.target.parentElement.dataset.index);
@@ -1040,13 +892,12 @@ function updateSelectedMedicationsDisplay() {
   });
 }
 
-// Update the quantity of a medication in the schedule
 function updateMedicationQuantity(index, newQuantity) {
   newQuantity = parseInt(newQuantity);
   
   if (isNaN(newQuantity) || newQuantity < 1) {
     logMessage('Please enter a valid quantity', 'system');
-    updateSelectedMedicationsDisplay(); // Reset the display
+    updateSelectedMedicationsDisplay(); 
     return;
   }
   
@@ -1055,7 +906,7 @@ function updateMedicationQuantity(index, newQuantity) {
   
   if (newQuantity > availablePills) {
     logMessage(`Not enough pills available. Only ${availablePills} ${compartmentData[compartmentNum].pillName} pills remaining.`, 'system');
-    updateSelectedMedicationsDisplay(); // Reset the display
+    updateSelectedMedicationsDisplay(); 
     return;
   }
   
@@ -1063,19 +914,16 @@ function updateMedicationQuantity(index, newQuantity) {
   updateSelectedMedicationsDisplay();
 }
 
-// Remove a medication from the schedule
 function removeMedication(index) {
   selectedMedications.splice(index, 1);
   updateSelectedMedicationsDisplay();
 }
 
-// Create a new schedule
 function createSchedule() {
   const scheduleName = document.getElementById('schedule-name').value.trim();
   const scheduleDate = document.getElementById('schedule-date').value;
   const scheduleTime = document.getElementById('schedule-time').value;
   
-  // Validate inputs
   if (!scheduleName) {
     logMessage('Please enter a schedule name', 'system');
     return;
@@ -1096,28 +944,23 @@ function createSchedule() {
     return;
   }
   
-  // Create the schedule datetime
   const scheduleDatetime = new Date(`${scheduleDate}T${scheduleTime}`);
   
-  // Create the schedule object
   const schedule = {
     id: nextScheduleId++,
     name: scheduleName,
     datetime: scheduleDatetime,
-    medications: JSON.parse(JSON.stringify(selectedMedications)), // Deep copy
+    medications: JSON.parse(JSON.stringify(selectedMedications)), 
     active: true,
     created: new Date(),
-    recurring: true, // Make schedules recurring by default
+    recurring: true, 
     lastDispensed: null
   };
   
-  // Add to schedules list
   schedules.push(schedule);
   
-  // Update schedules display
   updateSchedulesDisplay();
   
-  // Clean up
   currentProcess = null;
   formArea.innerHTML = '';
   formArea.classList.remove('active');
@@ -1125,46 +968,36 @@ function createSchedule() {
   
   logMessage(`Schedule "${scheduleName}" created for ${formatDate(scheduleDatetime)}`, 'system');
   
-  // Sync with device if connected
   if (isConnected) {
-    // Send just this new schedule to the device
     const hour = scheduleDatetime.getHours();
     const minute = scheduleDatetime.getMinutes();
-    // For simplicity, we'll make every schedule active every day
-    const daysOfWeek = 0x7F; // All days of the week
+    const daysOfWeek = 0x7F; 
     
     sendCommand(`ADD_SCHEDULE:${schedule.id},${hour},${minute},${daysOfWeek}`);
     logMessage(`Sent new schedule to device: ${scheduleName} at ${hour}:${minute}`, 'system');
   }
   
-  // Check for due schedules
   checkDueSchedules();
 }
 
-// Update the display of schedules
 function updateSchedulesDisplay() {
   if (schedules.length === 0) {
     scheduleList.innerHTML = '<p class="no-schedules">No scheduled medications. Create a schedule to get started.</p>';
     return;
   }
   
-  // Sort schedules by datetime
   const sortedSchedules = [...schedules].sort((a, b) => a.datetime - b.datetime);
   
   let html = '';
   sortedSchedules.forEach(schedule => {
-    // Calculate total number of pills
     const totalPills = schedule.medications.reduce((sum, med) => sum + med.quantity, 0);
     
-    // Check if this schedule is due
     const isDue = new Date(schedule.datetime) <= new Date();
     const dueClass = isDue ? 'due' : '';
     
-    // Show when this was last dispensed
     const lastDispensedInfo = schedule.lastDispensed ? 
       `<div class="schedule-last-dispensed">Last taken: ${formatDate(new Date(schedule.lastDispensed))}</div>` : '';
     
-    // Set disabled attribute based on connection status
     const disabledAttr = !isConnected ? 'disabled' : '';
     
     html += `
@@ -1192,10 +1025,8 @@ function updateSchedulesDisplay() {
   
   scheduleList.innerHTML = html;
   
-  // Add event listeners for schedule actions
   document.querySelectorAll('.schedule-delete').forEach(button => {
     button.addEventListener('click', (event) => {
-      // Only proceed if connected and button is not disabled
       if (!isConnected || event.target.disabled) return;
       
       const id = parseInt(event.target.dataset.id);
@@ -1205,7 +1036,6 @@ function updateSchedulesDisplay() {
   
   document.querySelectorAll('.schedule-activate').forEach(button => {
     button.addEventListener('click', (event) => {
-      // Only proceed if connected and button is not disabled
       if (!isConnected || event.target.disabled) return;
       
       const id = parseInt(event.target.dataset.id);
@@ -1214,16 +1044,12 @@ function updateSchedulesDisplay() {
   });
 }
 
-// Delete a schedule
 function deleteSchedule(id) {
   const scheduleIndex = schedules.findIndex(s => s.id === id);
   if (scheduleIndex !== -1) {
     const scheduleName = schedules[scheduleIndex].name;
     
-    // Send clear command for this schedule to device if connected
     if (isConnected) {
-      // Since we don't have a specific command to delete a single schedule,
-      // we'll send all schedules again after removing this one
       schedules.splice(scheduleIndex, 1);
       syncSchedulesToDevice();
     } else {
@@ -1235,7 +1061,6 @@ function deleteSchedule(id) {
   }
 }
 
-// Update the status of refill LED based on current pill counts across all compartments
 function updateRefillLEDStatus() {
   if (isConnected) {
     if (isCompartmentLow()) {
@@ -1246,15 +1071,12 @@ function updateRefillLEDStatus() {
   }
 }
 
-// Activate a schedule (simulate medication dispense)
 async function activateSchedule(id) {
-  // Don't allow activation if not connected
   if (!isConnected) {
     logMessage('Cannot dispense medication. Device not connected.', 'system');
     return;
   }
   
-  // Don't allow activation if already dispensing
   if (isDispensing) {
     logMessage('Already dispensing medications. Please wait.', 'system');
     return;
@@ -1271,23 +1093,18 @@ async function activateSchedule(id) {
   logMessage(`Activating schedule "${schedule.name}"...`, 'system');
   
   try {
-    // Turn off all LEDs first
     for (let i = 1; i <= 3; i++) {
       await sendCommand(`COMP${i}_LED OFF`);
     }
     
-    // Run a single LED rotation animation before dispensing
     await runLedAnimation();
     
-    // Count total pills to dispense
     const totalPills = schedule.medications.reduce((sum, med) => sum + med.quantity, 0);
     logMessage(`Dispensing a total of ${totalPills} pills...`, 'system');
     
-    // Dispense pills one by one from each compartment
     for (const med of schedule.medications) {
       const compartmentNum = med.compartment;
       
-      // Check if we have enough pills
       if (compartmentData[compartmentNum].pillCount < med.quantity) {
         logMessage(`Warning: Not enough ${med.name} pills in Compartment ${compartmentNum}!`, 'system');
         continue;
@@ -1295,30 +1112,22 @@ async function activateSchedule(id) {
       
       logMessage(`Dispensing ${med.quantity} ${med.name} pills from Compartment ${compartmentNum}`, 'system');
       
-      // Dispense pills one by one
       for (let i = 0; i < med.quantity; i++) {
-        // Light up the current compartment LED
         await sendCommand(`COMP${compartmentNum}_LED ON`);
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Simulate servo rotation for dispensing (one full rotation = one pill)
         await simulateServoDispense(compartmentNum);
         
-        // Turn off the LED after dispensing
         await sendCommand(`COMP${compartmentNum}_LED OFF`);
         await new Promise(resolve => setTimeout(resolve, 300));
         
-        // Deduct one pill from inventory
         compartmentData[compartmentNum].pillCount--;
         
-        // Update compartment display
         updateCompartmentDisplay(compartmentNum);
         
-        // Check refill status after each pill dispensed
         updateRefillLEDStatus();
       }
       
-      // Check if compartment is now empty
       if (compartmentData[compartmentNum].pillCount <= 0) {
         compartmentData[compartmentNum].filled = false;
         compartmentData[compartmentNum].pillCount = 0;
@@ -1326,15 +1135,11 @@ async function activateSchedule(id) {
       }
     }
     
-    // Immediately check refill status after dispensing completes
     updateRefillLEDStatus();
     
-    // Update schedule with last dispensed time
     schedule.lastDispensed = new Date();
     
-    // If it's a recurring schedule, update the datetime for the next occurrence
     if (schedule.recurring) {
-      // Calculate next occurrence (same time tomorrow)
       const nextOccurrence = new Date(schedule.datetime);
       nextOccurrence.setDate(nextOccurrence.getDate() + 1);
       schedule.datetime = nextOccurrence;
@@ -1342,10 +1147,8 @@ async function activateSchedule(id) {
       logMessage(`Schedule "${schedule.name}" updated for next occurrence: ${formatDate(nextOccurrence)}`, 'system');
     }
     
-    // Update display
     updateSchedulesDisplay();
     
-    // Update button states
     updateRefillButtonState();
     updateScheduleButtonState();
     
@@ -1357,40 +1160,30 @@ async function activateSchedule(id) {
   }
 }
 
-// Flag to prevent multiple dispensing operations at once
 let isDispensing = false;
 
-// Simulate servo motor dispensing a pill
 async function simulateServoDispense(compartmentNum) {
-  // Simulate servo opening (SERVO[compartmentNum] OPEN)
   logMessage(`Opening compartment ${compartmentNum} servo...`, 'system');
   await sendCommand(`SERVO${compartmentNum} OPEN`);
-  await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for servo to complete movement
+  await new Promise(resolve => setTimeout(resolve, 1000)); 
   
-  // Simulate servo closing (SERVO[compartmentNum] CLOSE)
   logMessage(`Closing compartment ${compartmentNum} servo...`, 'system');
   await sendCommand(`SERVO${compartmentNum} CLOSE`);
-  await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for servo to complete movement
-  
+  await new Promise(resolve => setTimeout(resolve, 1000)); 
   return true;
 }
 
-// Run LED animation (LED 1 -> LED 2 -> LED 3 sequence)
 async function runLedAnimation() {
   for (let i = 1; i <= 3; i++) {
-    // Turn on LED
     await sendCommand(`COMP${i}_LED ON`);
     await new Promise(resolve => setTimeout(resolve, 200));
     
-    // Turn off LED
     await sendCommand(`COMP${i}_LED OFF`);
     await new Promise(resolve => setTimeout(resolve, 100));
   }
 }
 
-// ========== Utility Functions ==========
 
-// Format a date for display
 function formatDate(date) {
   const options = { 
     weekday: 'short',
@@ -1403,7 +1196,6 @@ function formatDate(date) {
   return date.toLocaleDateString('en-US', options);
 }
 
-// Blink compartment LED n times
 async function blinkCompartmentLED(compartmentNumber, times) {
   for (let i = 0; i < times; i++) {
     await sendCommand(`COMP${compartmentNumber}_LED OFF`);
@@ -1414,14 +1206,12 @@ async function blinkCompartmentLED(compartmentNumber, times) {
   return sendCommand(`COMP${compartmentNumber}_LED OFF`);
 }
 
-// Cancel current process
 function cancelCurrentProcess() {
   if (activeCompartment) {
     sendCommand(`COMP${activeCompartment}_LED OFF`);
     activeCompartment = null;
   }
   
-  // Always turn off the refill LED when canceling any process
   if (currentProcess === 'refill') {
     sendCommand(`REFILL_LED OFF`);
   }
@@ -1434,30 +1224,23 @@ function cancelCurrentProcess() {
   logMessage('Process cancelled', 'system');
 }
 
-// ========== Initialize UI ==========
 function initializeUI() {
-  // Set initial compartment display
   for (let i = 1; i <= 3; i++) {
     updateCompartmentDisplay(i);
   }
   
-  // Update button states
   updateRefillButtonState();
   updateScheduleButtonState();
   
-  // Initialize schedules display
   updateSchedulesDisplay();
 }
 
-// Initialize the UI when the page loads
 window.addEventListener('DOMContentLoaded', initializeUI);
 
-// Start checking for schedules if connected
 if (isConnected) {
   startScheduleChecking();
 }
 
-// Cleanup event listeners when window is unloaded
 window.addEventListener('beforeunload', () => {
   if (ledBlinkInterval) {
     clearInterval(ledBlinkInterval);
@@ -1466,26 +1249,21 @@ window.addEventListener('beforeunload', () => {
   window.api.removeAllListeners();
 });
 
-// Function to start LED blinking
 function startLedBlinking() {
-  // Clear any existing interval
   if (ledBlinkInterval) {
     clearInterval(ledBlinkInterval);
   }
   
-  // Initialize LED to ON
   sendCommand('BT_LED ON');
   
   let ledState = true;
   
-  // Start blinking every 500ms
   ledBlinkInterval = setInterval(() => {
     ledState = !ledState;
     sendCommand(`BT_LED ${ledState ? 'ON' : 'OFF'}`);
   }, 500);
 }
 
-// Send current time to the device
 function sendTimeToDevice() {
   const now = new Date();
   const timeString = now.getFullYear() + '-' + 
@@ -1499,28 +1277,21 @@ function sendTimeToDevice() {
   logMessage(`Synchronized time with device: ${timeString}`, 'system');
 }
 
-// Sync all schedules to the device
 function syncSchedulesToDevice() {
   if (!isConnected) return;
   
-  // First clear all schedules on the device
   sendCommand('CLEAR_SCHEDULES');
   logMessage('Clearing device schedules...', 'system');
   
-  // Wait a moment for the clear command to complete
   setTimeout(() => {
-    // Send each schedule to the device
     schedules.forEach(schedule => {
       const scheduleTime = new Date(schedule.datetime);
       const hour = scheduleTime.getHours();
       const minute = scheduleTime.getMinutes();
       
-      // Calculate days of week
-      // For simplicity, we'll make every schedule active every day (0x7F = all days)
-      // In a real app, you would extract real day info from schedule.recurring pattern
-      const daysOfWeek = 0x7F; // All days of the week
+
+      const daysOfWeek = 0x7F; 
       
-      // Send schedule to the device
       sendCommand(`ADD_SCHEDULE:${schedule.id},${hour},${minute},${daysOfWeek}`);
       logMessage(`Sent schedule to device: ${schedule.name} at ${hour}:${minute}`, 'system');
     });
@@ -1529,9 +1300,7 @@ function syncSchedulesToDevice() {
   }, 500);
 }
 
-// Function to start auto-calibration process
 function startAutoCalibration(weightMg) {
-  // Prevent multiple calibrations
   if (isAutoCalibrating) {
     return;
   }
@@ -1539,27 +1308,22 @@ function startAutoCalibration(weightMg) {
   isAutoCalibrating = true;
   autoCalibrationStep = 0;
   
-  // Show the progress container
   calProgressContainer.style.display = 'block';
   calProgressBar.style.width = '0%';
   calProgressStep.textContent = 'Step 1: Preparing...';
   calProgressInstruction.textContent = 'Please remove all weight from the scale';
   
-  // Disable buttons during calibration
   tareButton.disabled = true;
   calibrateButton.disabled = true;
   autoCalButton.disabled = true;
   rawReadingButton.disabled = true;
   
-  // Send auto-calibration command
   sendCommand(`AUTO_CALIBRATE:${weightMg}`);
   logMessage(`Starting automatic calibration with ${weightMg}mg reference weight...`, 'system');
   
-  // Set the initial progress
   updateCalibrationProgress(0, 'Starting automatic calibration...');
 }
 
-// Process auto-calibration messages
 function processAutoCalibrationMessage(message) {
   if (message.startsWith('AUTO_CAL_START:')) {
     updateCalibrationProgress(10, 'Remove all weight from the scale');
@@ -1573,7 +1337,6 @@ function processAutoCalibrationMessage(message) {
     updateCalibrationProgress(40, `Place ${weight} on the scale`);
     calProgressStep.textContent = 'Step 2: Place reference weight';
     
-    // Show countdown for placing weight
     let countdown = 10;
     const countdownInterval = setInterval(() => {
       calProgressInstruction.textContent = `Place ${weight} on the scale (${countdown}s)`;
@@ -1597,9 +1360,8 @@ function processAutoCalibrationMessage(message) {
   else if (message.startsWith('AUTO_CAL_SUCCESS:')) {
     updateCalibrationProgress(100, 'Calibration successful!');
     calibrationStatus.textContent = 'Calibration Successful';
-    calibrationStatus.style.backgroundColor = '#d5f5e3'; // Light green
+    calibrationStatus.style.backgroundColor = '#d5f5e3'; 
     
-    // Hide progress bar after 3 seconds
     setTimeout(() => {
       if (isConnected) {
         calProgressContainer.style.display = 'none';
@@ -1612,7 +1374,7 @@ function processAutoCalibrationMessage(message) {
     const error = message.split(':')[1].trim();
     updateCalibrationProgress(100, `Warning: ${error}`);
     calibrationStatus.textContent = 'Calibrated with warnings';
-    calibrationStatus.style.backgroundColor = '#fdebd0'; // Light orange
+    calibrationStatus.style.backgroundColor = '#fdebd0'; 
     
     finishAutoCalibration();
   } 
@@ -1625,23 +1387,20 @@ function processAutoCalibrationMessage(message) {
     const reason = message.split(':')[1].trim();
     updateCalibrationProgress(100, `Calibration failed: ${reason}`);
     calibrationStatus.textContent = `Calibration failed: ${reason}`;
-    calibrationStatus.style.backgroundColor = '#fadbd8'; // Light red
+    calibrationStatus.style.backgroundColor = '#fadbd8'; 
     
     finishAutoCalibration();
   }
 }
 
-// Update progress bar and instructions
 function updateCalibrationProgress(percent, instruction) {
   calProgressBar.style.width = `${percent}%`;
   calProgressInstruction.textContent = instruction;
 }
 
-// Finish auto-calibration and clean up
 function finishAutoCalibration() {
   isAutoCalibrating = false;
   
-  // Re-enable buttons
   if (isConnected) {
     tareButton.disabled = false;
     calibrateButton.disabled = false;
@@ -1649,7 +1408,6 @@ function finishAutoCalibration() {
     rawReadingButton.disabled = false;
   }
   
-  // Clear any pending timeouts
   if (autoCalibrationTimeout) {
     clearTimeout(autoCalibrationTimeout);
   }
