@@ -1,4 +1,3 @@
-
 const scanButton = document.getElementById('scan-button');
 const stopScanButton = document.getElementById('stop-scan-button');
 const disconnectButton = document.getElementById('disconnect-button');
@@ -6,7 +5,6 @@ const devicesList = document.getElementById('devices-list').querySelector('.devi
 
 const bleStatus = document.getElementById('ble-status');
 const connectionStatus = document.getElementById('connection-status');
-const weightDisplay = document.getElementById('weight-display');
 const deviceMessages = document.getElementById('device-messages');
 
 const openButtons = document.querySelectorAll('.open-button');
@@ -22,11 +20,29 @@ const vibrateButton = document.getElementById('vibrate-button');
 const commandInput = document.getElementById('command-input');
 const sendCommandButton = document.getElementById('send-command-button');
 
+// Weight sensor elements
+const currentWeightDisplay = document.getElementById('current-weight');
+const tareButton = document.getElementById('tare-button');
+const getWeightButton = document.getElementById('get-weight-button');
+const calibrateButton = document.getElementById('calibrate-button');
+
 let isConnected = false;
 let isScanning = false;
 
 let ledBlinkInterval = null;
 
+// For maintaining the latest weight value
+let currentWeight = 0;
+
+// Add a variable to track whether we should auto-scroll
+let shouldAutoScroll = true;
+
+// Add an event listener to detect when the user manually scrolls
+deviceMessages.addEventListener('scroll', function() {
+  // If user is near bottom (within 20px), enable auto-scroll
+  const scrollPosition = deviceMessages.scrollHeight - deviceMessages.scrollTop - deviceMessages.clientHeight;
+  shouldAutoScroll = scrollPosition < 20;
+});
 
 scanButton.addEventListener('click', () => {
   startScanning();
@@ -104,6 +120,22 @@ vibrateButton.addEventListener('click', () => {
   toggleButtonState(vibrateButton, newState);
 });
 
+tareButton.addEventListener('click', () => {
+  sendCommand('TARE_SCALE');
+  logMessage('Taring scale (setting to zero)...', 'system');
+});
+
+getWeightButton.addEventListener('click', () => {
+  sendCommand('GET_WEIGHT');
+  logMessage('Requesting current weight...', 'system');
+});
+
+calibrateButton.addEventListener('click', () => {
+  if (confirm("Make sure a 64.1g reference weight is on the scale. Continue with calibration?")) {
+    sendCommand('AUTO_CALIBRATE');
+    logMessage('Calibrating scale with 64.1g reference weight...', 'system');
+  }
+});
 
 window.api.onBleStatus((status) => {
   bleStatus.textContent = `Bluetooth: ${status}`;
@@ -212,20 +244,22 @@ window.api.onConnectionStatus((status) => {
 window.api.onDeviceData((data) => {
   logMessage(`Received: ${data}`, 'received');
   
+  // Handle weight data
+  if (data.startsWith('WEIGHT:')) {
+    const weightPart = data.split(':')[1];
+    currentWeight = parseFloat(weightPart);
+    currentWeightDisplay.textContent = `Weight: ${weightPart}`;
+    return;
+  }
+  
   if (data === 'REQUEST_TIME') {
     sendTimeToDevice();
     return;
   }
   
   if (data === 'CHECK_SCHEDULES') {
-
     logMessage('Device requested schedule check (not implemented in this page)', 'system');
     return;
-  }
-  
-  if (data.startsWith('WEIGHT:')) {
-    const weight = data.split(':')[1].trim();
-    weightDisplay.textContent = weight;
   }
 });
 
@@ -281,6 +315,16 @@ function enableControls(enabled) {
   
   commandInput.disabled = !enabled;
   sendCommandButton.disabled = !enabled;
+  
+  // Enable weight sensor controls
+  tareButton.disabled = !enabled;
+  getWeightButton.disabled = !enabled;
+  calibrateButton.disabled = !enabled;
+  
+  // If enabled, get current weight
+  if (enabled) {
+    sendCommand('GET_WEIGHT');
+  }
 }
 
 function resetControlStates() {
@@ -296,8 +340,6 @@ function resetControlStates() {
   toggleButtons.forEach(button => {
     toggleButtonState(button, 'off');
   });
-  
-  weightDisplay.textContent = 'No weight data available';
 }
 
 function logMessage(message, type = 'system') {
@@ -305,9 +347,15 @@ function logMessage(message, type = 'system') {
   messageElement.className = `message ${type}`;
   messageElement.textContent = message;
   
+  // Store whether we're at the bottom
+  const isAtBottom = shouldAutoScroll;
+  
   deviceMessages.appendChild(messageElement);
   
-  deviceMessages.scrollTop = deviceMessages.scrollHeight;
+  // Only auto-scroll if the user hasn't scrolled up
+  if (isAtBottom) {
+    deviceMessages.scrollTop = deviceMessages.scrollHeight;
+  }
   
   const messages = deviceMessages.querySelectorAll('.message');
   if (messages.length > 100) {

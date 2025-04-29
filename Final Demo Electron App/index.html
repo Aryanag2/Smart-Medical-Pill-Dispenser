@@ -76,16 +76,28 @@
           <button id="vibrate-button" class="status-toggle" data-state="off" disabled>Vibration: OFF</button>
         </div>
       </div>
-      <div class="weight-section">
-        <h3>Weight Readings</h3>
-        <div id="weight-display">No weight data available</div>
-      </div>
       <div class="commands-section">
         <h3>Custom Commands</h3>
         <div class="command-input">
           <input type="text" id="command-input" placeholder="Enter custom command (e.g., TARE)" disabled>
           <button id="send-command-button" disabled>Send</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Add weight sensor section -->
+    <div class="weight-sensor-section">
+      <h2>Weight Sensor</h2>
+      <div class="weight-display">
+        <div id="current-weight">Weight: -- g</div>
+        <div class="weight-controls">
+          <button id="tare-button" class="weight-control-btn" disabled>Tare (Zero)</button>
+          <button id="get-weight-button" class="weight-control-btn" disabled>Read Weight</button>
+          <button id="calibrate-button" class="weight-control-btn" disabled>Auto-Calibrate (64.1g)</button>
+        </div>
+      </div>
+      <div class="calibration-instructions">
+        <p>To calibrate: 1) Tare with empty scale, 2) Place a 64.1g weight on the scale, 3) Click Auto-Calibrate</p>
       </div>
     </div>
 

@@ -13,20 +13,6 @@ const scheduleButton = document.getElementById('schedule-button');
 const formArea = document.getElementById('form-area');
 const scheduleList = document.getElementById('schedule-list');
 
-const calibrationWeight = document.getElementById('calibration-weight');
-const calibrationStatus = document.getElementById('calibration-status');
-const tareButton = document.getElementById('tare-button');
-const calibrateButton = document.getElementById('calibrate-button');
-const autoCalButton = document.getElementById('auto-calibrate-button');
-const rawReadingButton = document.getElementById('raw-reading-button');
-const currentWeightDisplay = document.getElementById('current-weight-display');
-const postDispenseWeightDisplay = document.getElementById('post-dispense-weight');
-
-const calProgressContainer = document.getElementById('calibration-progress-container');
-const calProgressBar = document.getElementById('calibration-progress-bar');
-const calProgressStep = document.getElementById('calibration-progress-step');
-const calProgressInstruction = document.getElementById('calibration-progress-instruction');
-
 const compartmentCards = {
   1: document.getElementById('compartment1-card'),
   2: document.getElementById('compartment2-card'),
@@ -67,9 +53,15 @@ const compartmentData = {
 let schedules = [];
 let nextScheduleId = 1;
 
-let isAutoCalibrating = false;
-let autoCalibrationStep = 0;
-let autoCalibrationTimeout = null;
+// Add a variable to track whether we should auto-scroll
+let shouldAutoScroll = true;
+
+// Add an event listener to detect when the user manually scrolls
+demoMessages.addEventListener('scroll', function() {
+  // If user is near bottom (within 20px), enable auto-scroll
+  const scrollPosition = demoMessages.scrollHeight - demoMessages.scrollTop - demoMessages.clientHeight;
+  shouldAutoScroll = scrollPosition < 20;
+});
 
 function checkDueSchedules() {
   const now = new Date();
@@ -153,53 +145,6 @@ scheduleButton.addEventListener('click', () => {
   showScheduleForm();
 });
 
-tareButton.addEventListener('click', () => {
-  sendCommand('TARE');
-  logMessage('Taring scale...', 'system');
-});
-
-calibrateButton.addEventListener('click', () => {
-  const weight = parseInt(calibrationWeight.value);
-  if (isNaN(weight) || weight <= 0) {
-    logMessage('Please enter a valid calibration weight in milligrams', 'system');
-    return;
-  }
-  
-  sendCommand(`CALIBRATE:${weight}`);
-  logMessage(`Starting calibration with ${weight}mg reference weight...`, 'system');
-  calibrationStatus.textContent = 'Calibration in progress...';
-  
-  tareButton.disabled = true;
-  calibrateButton.disabled = true;
-  autoCalButton.disabled = true;
-  rawReadingButton.disabled = true;
-  
-  setTimeout(() => {
-    if (isConnected) {
-      tareButton.disabled = false;
-      calibrateButton.disabled = false;
-      autoCalButton.disabled = false;
-      rawReadingButton.disabled = false;
-    }
-  }, 7000);
-});
-
-autoCalButton.addEventListener('click', () => {
-  const weight = parseInt(calibrationWeight.value);
-  if (isNaN(weight) || weight <= 0) {
-    logMessage('Please enter a valid calibration weight in milligrams', 'system');
-    return;
-  }
-  
-  startAutoCalibration(weight);
-});
-
-rawReadingButton.addEventListener('click', () => {
-  sendCommand('RAW');
-  logMessage('Requesting raw ADC reading...', 'system');
-});
-
-
 window.api.onBleStatus((status) => {
   bleStatus.textContent = `Bluetooth: ${status}`;
   logMessage(`Bluetooth status: ${status}`, 'system');
@@ -276,15 +221,14 @@ window.api.onConnectionStatus((status) => {
     updateRefillButtonState();
     updateScheduleButtonState();
     
-    tareButton.disabled = false;
-    calibrateButton.disabled = false;
-    autoCalButton.disabled = false;
-    rawReadingButton.disabled = false;
-    
     clearInterval(ledBlinkInterval);
     sendCommand('BT_LED ON');
     
     sendTimeToDevice();
+    
+    // Request pill data from ESP32
+    sendCommand('REQUEST_PILL_DATA');
+    logMessage('Requesting pill data from device...', 'system');
     
     scanButton.disabled = true;
     stopScanButton.disabled = true;
@@ -300,11 +244,6 @@ window.api.onConnectionStatus((status) => {
     fillButton.disabled = true;
     refillButton.disabled = true;
     scheduleButton.disabled = true;
-    
-    tareButton.disabled = true;
-    calibrateButton.disabled = true;
-    autoCalButton.disabled = true;
-    rawReadingButton.disabled = true;
     
     sendCommand('BT_LED OFF');
     
@@ -326,9 +265,6 @@ window.api.onConnectionStatus((status) => {
     postDispenseWeightDisplay.textContent = 'Post-dispense: No data';
     
     calProgressContainer.style.display = 'none';
-    if (isAutoCalibrating) {
-      finishAutoCalibration();
-    }
   }
 });
 
@@ -352,42 +288,33 @@ window.api.onDeviceData((data) => {
     return;
   }
   
-  if (data.startsWith('AUTO_CAL_')) {
-    processAutoCalibrationMessage(data);
-  }
-  
-  if (data.startsWith('WEIGHT:')) {
-    const weight = data.split(':')[1].trim();
-    currentWeightDisplay.textContent = weight;
-  }
-  
-  if (data.startsWith('POST_DISPENSE_WEIGHT:')) {
-    const weight = data.split(':')[1].trim();
-    postDispenseWeightDisplay.textContent = `Post-dispense: ${weight}`;
-  }
-  
-  if (data.startsWith('CALIBRATED:')) {
-    const factor = data.split(':')[1].trim();
-    calibrationStatus.textContent = `Calibrated (Factor: ${factor})`;
-    calibrationStatus.style.backgroundColor = '#d5f5e3';
-    logMessage(`Calibration successful! New calibration factor: ${factor}`, 'system');
-  }
-  
-  if (data.startsWith('CALIBRATION_FAILED:') && !isAutoCalibrating) {
-    const reason = data.split(':')[1].trim();
-    calibrationStatus.textContent = `Calibration failed: ${reason}`;
-    calibrationStatus.style.backgroundColor = '#fadbd8'; 
-    logMessage(`Calibration failed: ${reason}`, 'system');
-  }
-  
-  if (data.startsWith('PLACE_WEIGHT:') && !isAutoCalibrating) {
-    const weight = data.split(':')[1].trim();
-    logMessage(`Please place ${weight} on the scale`, 'system');
-  }
-  
-  if (data.startsWith('RAW:')) {
-    const raw = data.split(':')[1].trim();
-    logMessage(`Raw ADC reading: ${raw}`, 'system');
+  // Handle received pill data
+  if (data.startsWith('PILL_DATA:')) {
+    try {
+      const pillData = JSON.parse(data.substring(10));
+      logMessage('Received pill data from device', 'system');
+      
+      let restoredCompartments = [];
+      
+      // Update local compartment data with received data
+      for (const [compartmentNum, data] of Object.entries(pillData)) {
+        if (data && data.filled) {
+          compartmentData[compartmentNum] = data;
+          updateCompartmentDisplay(parseInt(compartmentNum));
+          restoredCompartments.push(compartmentNum);
+        }
+      }
+      
+      if (restoredCompartments.length > 0) {
+        logMessage(`Restored pill data for compartments: ${restoredCompartments.join(', ')}`, 'system');
+      }
+      
+      updateRefillButtonState();
+      updateScheduleButtonState();
+    } catch (error) {
+      logMessage(`Error parsing pill data: ${error.message}`, 'system');
+    }
+    return;
   }
 });
 
@@ -420,9 +347,15 @@ function logMessage(message, type = 'system') {
   messageElement.className = `message ${type}`;
   messageElement.textContent = message;
   
+  // Store the current scroll position and check if we're at the bottom
+  const isAtBottom = shouldAutoScroll;
+  
   demoMessages.appendChild(messageElement);
   
-  demoMessages.scrollTop = demoMessages.scrollHeight;
+  // Only auto-scroll if the user hasn't scrolled up
+  if (isAtBottom) {
+    demoMessages.scrollTop = demoMessages.scrollHeight;
+  }
   
   const messages = demoMessages.querySelectorAll('.message');
   if (messages.length > 100) {
@@ -618,6 +551,11 @@ function completeFilling(compartmentNumber, pillName, pillCount, pillWeight) {
       updateRefillButtonState();
       updateScheduleButtonState();
       
+      // Save pill data to ESP32
+      if (isConnected) {
+        savePillDataToDevice();
+      }
+      
       activeCompartment = null;
       currentProcess = null;
       formArea.innerHTML = '';
@@ -726,6 +664,11 @@ function completeRefilling(compartmentNumber, additionalPills) {
       }
       
       updateCompartmentDisplay(compartmentNumber);
+      
+      // Save updated pill data to ESP32
+      if (isConnected) {
+        savePillDataToDevice();
+      }
       
       activeCompartment = null;
       currentProcess = null;
@@ -1112,6 +1055,9 @@ async function activateSchedule(id) {
       
       logMessage(`Dispensing ${med.quantity} ${med.name} pills from Compartment ${compartmentNum}`, 'system');
       
+      // Save the current pill count
+      const previousCount = compartmentData[compartmentNum].pillCount;
+      
       for (let i = 0; i < med.quantity; i++) {
         await sendCommand(`COMP${compartmentNum}_LED ON`);
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -1123,6 +1069,7 @@ async function activateSchedule(id) {
         
         compartmentData[compartmentNum].pillCount--;
         
+        // Update UI after each pill dispensed
         updateCompartmentDisplay(compartmentNum);
         
         updateRefillLEDStatus();
@@ -1133,6 +1080,16 @@ async function activateSchedule(id) {
         compartmentData[compartmentNum].pillCount = 0;
         logMessage(`Compartment ${compartmentNum} is now empty`, 'system');
       }
+      
+      // If pill count changed, save to device
+      if (previousCount !== compartmentData[compartmentNum].pillCount) {
+        savePillDataToDevice();
+      }
+    }
+    
+    // Save updated pill counts to ESP32
+    if (isConnected) {
+      savePillDataToDevice();
     }
     
     updateRefillLEDStatus();
@@ -1300,115 +1257,15 @@ function syncSchedulesToDevice() {
   }, 500);
 }
 
-function startAutoCalibration(weightMg) {
-  if (isAutoCalibrating) {
-    return;
-  }
+// Add function to save pill data to device
+function savePillDataToDevice() {
+  if (!isConnected) return;
   
-  isAutoCalibrating = true;
-  autoCalibrationStep = 0;
-  
-  calProgressContainer.style.display = 'block';
-  calProgressBar.style.width = '0%';
-  calProgressStep.textContent = 'Step 1: Preparing...';
-  calProgressInstruction.textContent = 'Please remove all weight from the scale';
-  
-  tareButton.disabled = true;
-  calibrateButton.disabled = true;
-  autoCalButton.disabled = true;
-  rawReadingButton.disabled = true;
-  
-  sendCommand(`AUTO_CALIBRATE:${weightMg}`);
-  logMessage(`Starting automatic calibration with ${weightMg}mg reference weight...`, 'system');
-  
-  updateCalibrationProgress(0, 'Starting automatic calibration...');
-}
-
-function processAutoCalibrationMessage(message) {
-  if (message.startsWith('AUTO_CAL_START:')) {
-    updateCalibrationProgress(10, 'Remove all weight from the scale');
-  } 
-  else if (message.startsWith('AUTO_CAL_TARED:')) {
-    autoCalibrationStep = 1;
-    updateCalibrationProgress(30, 'Scale is now zeroed');
-  } 
-  else if (message.startsWith('AUTO_CAL_PLACE_WEIGHT:')) {
-    const weight = message.split(':')[1].trim();
-    updateCalibrationProgress(40, `Place ${weight} on the scale`);
-    calProgressStep.textContent = 'Step 2: Place reference weight';
-    
-    let countdown = 10;
-    const countdownInterval = setInterval(() => {
-      calProgressInstruction.textContent = `Place ${weight} on the scale (${countdown}s)`;
-      countdown--;
-      
-      if (countdown < 0) {
-        clearInterval(countdownInterval);
-      }
-    }, 1000);
-  } 
-  else if (message.startsWith('AUTO_CAL_FACTOR:')) {
-    autoCalibrationStep = 2;
-    const factor = message.split(':')[1].trim();
-    updateCalibrationProgress(70, `Calibration factor: ${factor}`);
-    calProgressStep.textContent = 'Step 3: Testing calibration';
-  } 
-  else if (message.startsWith('AUTO_CAL_TEST:')) {
-    const weight = message.split(':')[1].trim();
-    updateCalibrationProgress(80, `Test reading: ${weight}`);
-  } 
-  else if (message.startsWith('AUTO_CAL_SUCCESS:')) {
-    updateCalibrationProgress(100, 'Calibration successful!');
-    calibrationStatus.textContent = 'Calibration Successful';
-    calibrationStatus.style.backgroundColor = '#d5f5e3'; 
-    
-    setTimeout(() => {
-      if (isConnected) {
-        calProgressContainer.style.display = 'none';
-      }
-    }, 3000);
-    
-    finishAutoCalibration();
-  } 
-  else if (message.startsWith('AUTO_CAL_WARNING:')) {
-    const error = message.split(':')[1].trim();
-    updateCalibrationProgress(100, `Warning: ${error}`);
-    calibrationStatus.textContent = 'Calibrated with warnings';
-    calibrationStatus.style.backgroundColor = '#fdebd0'; 
-    
-    finishAutoCalibration();
-  } 
-  else if (message.startsWith('AUTO_CAL_COMPLETE:')) {
-    updateCalibrationProgress(100, 'You can now remove the calibration weight');
-    
-    finishAutoCalibration();
-  }
-  else if (message.startsWith('CALIBRATION_FAILED:')) {
-    const reason = message.split(':')[1].trim();
-    updateCalibrationProgress(100, `Calibration failed: ${reason}`);
-    calibrationStatus.textContent = `Calibration failed: ${reason}`;
-    calibrationStatus.style.backgroundColor = '#fadbd8'; 
-    
-    finishAutoCalibration();
-  }
-}
-
-function updateCalibrationProgress(percent, instruction) {
-  calProgressBar.style.width = `${percent}%`;
-  calProgressInstruction.textContent = instruction;
-}
-
-function finishAutoCalibration() {
-  isAutoCalibrating = false;
-  
-  if (isConnected) {
-    tareButton.disabled = false;
-    calibrateButton.disabled = false;
-    autoCalButton.disabled = false;
-    rawReadingButton.disabled = false;
-  }
-  
-  if (autoCalibrationTimeout) {
-    clearTimeout(autoCalibrationTimeout);
+  try {
+    const pillDataJson = JSON.stringify(compartmentData);
+    sendCommand(`SAVE_PILL_DATA:${pillDataJson}`);
+    logMessage('Saved pill data to device', 'system');
+  } catch (error) {
+    logMessage(`Error saving pill data: ${error.message}`, 'system');
   }
 } 

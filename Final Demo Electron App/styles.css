@@ -259,21 +259,12 @@ header h1 {
   background-color: #27ae60;
 }
 
-.weight-section, .commands-section {
+.commands-section {
   background-color: white;
   border-radius: 8px;
   padding: 15px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
-}
-
-#weight-display {
-  font-size: 18px;
-  text-align: center;
-  padding: 10px;
-  background-color: #f8f9fa;
-  border-radius: 4px;
-  margin-top: 10px;
 }
 
 .command-input {
@@ -334,4 +325,66 @@ header h1 {
   .command-input {
     flex-direction: column;
   }
+}
+
+/* Add styles for weight sensor section */
+.weight-sensor-section {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.weight-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+#current-weight {
+  font-size: 20px;
+  font-weight: bold;
+  color: #333;
+  padding: 10px;
+  background-color: #e3f2fd;
+  border-radius: 5px;
+  min-width: 150px;
+  text-align: center;
+  border: 1px solid #b3e5fc;
+}
+
+.weight-controls {
+  display: flex;
+  gap: 10px;
+}
+
+.weight-control-btn {
+  padding: 8px 15px;
+  border-radius: 5px;
+  border: none;
+  background-color: #2196f3;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.weight-control-btn:hover:not(:disabled) {
+  background-color: #0d8aee;
+}
+
+.weight-control-btn:disabled {
+  background-color: #b3b3b3;
+  cursor: not-allowed;
+}
+
+.calibration-instructions {
+  background-color: #fffde7;
+  padding: 10px;
+  border-radius: 5px;
+  border-left: 4px solid #ffd600;
+  font-size: 14px;
+  color: #555;
+  margin-top: 10px;
 } 
