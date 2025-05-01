@@ -34,9 +34,9 @@ The USB-UART breakout board should help a ton. We broke so many Micro USB ports 
 Learned AutoCAD for this class. This trimmers should come in soon, will go to SCD and have them printed out. They said it should only cost about $1.80.
 
 ### 3D Prints
-![Compartment 1](Notebook9_image5.png)
-![Compartment 2](Notebook9_image6.png)
-![Compartment 3](Notebook9_image7.png)
+![Compartment 1](Notebook10_image5.png)
+![Compartment 2](Notebook10_image6.png)
+![Compartment 3](Notebook10_image7.png)
 
 ## Personal Thoughts
 The power only PCB is working correctly outputting around 5.07V and 3.301V respectively. Tried to put power in directly to the output pins of the regulator through holes of the original PCB but that ended up leading to 1.7V for the 5V through hole or 0.6V for the 3.3V through hole. Going to need to figure out a way to power the final design with this PCB. That seems to be having the power subsystem on the PCB and the rest outside it. Hopefully we get a good set of points from the final demo rubric, and the final last chance PCB can come in time.
