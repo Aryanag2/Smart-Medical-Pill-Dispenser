@@ -42,8 +42,8 @@ Going to solder the Power only PCB without surface mounts, with through hole ins
 ### Power Only PCB
 ![PCB View](Notebook9_image2.png)
 
-For the pills that are jamming we are going to decrease the size of the container, so that they can hold less but jam less too.
+We tried soldering the diode but it keeps breaking, I wonder if we really need it for the time being, or if we can do without.
 
 ## Personal Thoughts
 
-Having to make A LOT of changes, kind of unsettling. We will likely need to use the dev board for the final demo. We do know what we would do to fix the PCB though, so hopefully that counts for something. Definitely learned a lot about engineering set backs and unaccounted for errors that can arise.
+Having to make A LOT of changes, kind of unsettling. We will likely need to use the dev board for the final demo. We do know what we would do to fix the PCB though, so hopefully that counts for something. Definitely learned a lot about engineering set backs and unaccounted for errors that can arise. For the pills that are jamming we are going to decrease the size of the container, so that they can hold less but jam less too.

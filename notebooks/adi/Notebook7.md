@@ -14,6 +14,8 @@
 4. ESP32-WROOM-32D - Ordered 10
 5. ESP32-WROOM-32U - Ordered 5
 
+Working with both USB-UART bridges since one is in the self help drawers and the other we bought in bulk. We can try to make the FT232RL work and by the time the CP2102 comes we can switch over to it if necessary. From what I have read online though, the FT232RL should work just fine.
+
 ### Schematic
 ![Schematic View 1](Notebook7_image1.png)
 ![Schematic View 2](Notebook7_image2.png)
