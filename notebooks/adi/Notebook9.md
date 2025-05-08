@@ -1,6 +1,6 @@
 # Notebook 9
 
-**Date:** April 20th, 2025
+**Date:** April 13th, 2025
 
 ## Objectives
 1. Get the Electron App to work
@@ -21,12 +21,6 @@ Our PCB's overheating because the trace widths are too large, most likely.
 
 We are going to pull our power subsystem out into a seperate PCB to have it work
 
-### Power Only Schematic
-![Schematic View](Notebook9_image1.png)
-
-### Power Only PCB
-![PCB View](Notebook9_image2.png)
-
 We ran out of FT232RL chips in the self help drawers, and don't have time to order more so we are switching back to CP2102 but its going to be hard to solder these on.
 
 ### Electron App
@@ -42,8 +36,14 @@ Pack schedule data into a 32-bit integer:
 
 Going to solder the Power only PCB without surface mounts, with through hole instead.
 
-For the pills that are jamming we are going to decrease the size of the container, so that they can hold less but jam less too.
+### Power Only Schematic
+![Schematic View](Notebook9_image1.png)
+
+### Power Only PCB
+![PCB View](Notebook9_image2.png)
+
+We tried soldering the diode but it keeps breaking, I wonder if we really need it for the time being, or if we can do without.
 
 ## Personal Thoughts
 
-Having to make A LOT of changes, kind of unsettling. We will likely need to use the dev board for the final demo. We do know what we would do to fix the PCB though, so hopefully that counts for something. Definitely learned a lot about engineering set backs and unaccounted for errors that can arise.
+Having to make A LOT of changes, kind of unsettling. We will likely need to use the dev board for the final demo. We do know what we would do to fix the PCB though, so hopefully that counts for something. Definitely learned a lot about engineering set backs and unaccounted for errors that can arise. For the pills that are jamming we are going to decrease the size of the container, so that they can hold less but jam less too.
