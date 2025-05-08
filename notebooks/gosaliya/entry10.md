@@ -17,5 +17,3 @@
 - `wooden-enclosure-with-logo-leds.png` — Photo of breadboard inside enclosure with buttons and LEDs installed and 3d printed trimmers installed  
 - `logo.png` — logo for ADAPT  
 
-*Attach `fig10_1.png` and `fig10_2.png` on the left-hand page.*  
-
