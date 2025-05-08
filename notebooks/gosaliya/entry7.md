@@ -6,7 +6,7 @@
 - Identify firmware refinements before design review  
 
 **Record (Right-Hand Page):**
-- Assembled ESP32, RTC module, load-cell amplifier, servo-driven linear shutter, LEDs, button, and battery backup on the breadboard  
+- Assembled ESP32, , load-cell amplifier, servo motors, LEDs, button, and battery backup on the breadboard  
 - Uploaded consolidated firmware with modular functions (`dispensePill()`, `indexCompartment()`, `readWeight()`, `handleBTCommands()`)  
 - Ran demo sequence: wake, dispense dose, verify weight, signal success via LED  
 - Measured average dispense latency: 1.8 s  
@@ -15,5 +15,5 @@
 - Prepared notes for upcoming design review and final paper  
 
 **Figures (Left-Hand Page):**
-- `fig7_1.png` – Photo of integrated breadboard assembly  
-- `fig7_2.png` – Timing sequence diagram of the dispense cycle  
+- `breadboard.png` – Photo of integrated breadboard assembly  
+- `basic-blueooth.png` - Basic bluetooth connectivity from ES32  

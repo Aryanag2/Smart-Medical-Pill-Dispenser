@@ -21,5 +21,5 @@
   3. Refine firmware timing and calibration for the new mechanism  
 
 **Figures (Left-Hand Page):**
-- `breadbaord` — Photo of the breadboard prototype setup  
+- `breadboard.png` — Photo of the breadboard prototype setup  
   

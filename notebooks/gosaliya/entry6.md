@@ -17,3 +17,8 @@
 - **Failsafe & debugging:**  
   - Added error-LED blink on stall detection  
   - Serial logging timestamps each state and error for tuning timing constants
+- Received mechanical enclosure from machine shop
+
+**Figures (Left-Hand Page):**
+- `basic-sketch.png`- Basic sketch showing servo control
+- `wooden-enclosure.png` - Received mechanical enclosure from machine shop with servos, laod cell and pills

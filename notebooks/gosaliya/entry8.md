@@ -14,7 +14,4 @@
 - Defined next steps: full feature integration, robust error handling, and UI styling  
 
 **Figures (Left-Hand Page):**
-- `fig8_1.png` — Screenshot of web app dashboard with control buttons  
-- `fig8_2.png` — Diagram of Web App ↔ Device communication flow  
-
-*Attach `fig8_1.png` and `fig8_2.png` on the left-hand page.*  
+- `basic-webapp.png` — Screenshot of web app dashboard with control buttons  

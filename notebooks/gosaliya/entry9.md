@@ -7,7 +7,7 @@
 - Design and order revised power-only PCB  
 
 **Record (Right-Hand Page):**
-- PCB1 arrived; soldered ESP32, RTC, load-cell amp, linear shutter, LEDs & button, and power regulators  
+- PCB1 arrived; soldered ESP32, hx711, servos, LEDs & button, and power regulators  
 - Powered on: observed 5 V rail drop to 4.2 V under 500 mA load and regulator surface overheating after ~5 min  
 - Measured PCB trace resistance; calculated I²R losses vs. expected voltage drop  
 - Conducted tolerance analysis on regulator dropout voltage and copper trace ampacity  
@@ -16,7 +16,4 @@
 - Placed order for power-only PCB revision; delivery expected in 2 weeks  
 
 **Figures (Left-Hand Page):**
-- `fig9_1.png` — Photo of overheated regulator area on PCB1  
-- `fig9_2.png` — Power-subsystem schematic excerpt showing revised trace widths  
-
-*Attach `fig9_1.png` and `fig9_2.png` on the left-hand page.*
+- `final-pcb.png` - Kicad for PCB ordered
