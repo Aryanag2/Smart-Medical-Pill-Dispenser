@@ -11,10 +11,11 @@
 - Observed pill jams in rotating gate design; designed “trimmer” guides to smooth flow  
 - Sent trimmer models to SCD for 3D printing in PETG to test clearances  
 - Verified button actuation and LED visibility through enclosure cutouts  
+- Created logo or ADAPT ( Adi/Aryan Dispenser Advanced Pill Technology) on CANVA
 
 **Figures (Left-Hand Page):**
-- `fig10_1.png` — Photo of breadboard inside enclosure with buttons and LEDs installed  
-- `fig10_2.png` — Render of 3D-printed trimmer guide prototypes  
+- `wooden-enclosure-with-logo-leds.png` — Photo of breadboard inside enclosure with buttons and LEDs installed and 3d printed trimmers installed  
+- `logo.png` — logo for ADAPT  
 
 *Attach `fig10_1.png` and `fig10_2.png` on the left-hand page.*  
 

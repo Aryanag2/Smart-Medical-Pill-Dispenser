@@ -14,7 +14,7 @@
   - Drew schematic for seamless switchover (diode-OR) between wall adapter and Li-ion pack  
   - Sized polyfuse and decoupling caps for 1 A peak load  
 - **Component decision:**  
-  - Switched from ATmega328 + HC-05 to ESP32-WROOM for built-in BLE, extra GPIO, and simplified PCB routing  
+  - Switched from ATmega328 + HC-05 to ESP32-WROOM for built-in BLE, extra GPIO, and simplified PCB routing. No need for external RTC module
 
 **Figures (Left-Hand Page):**
 - `power.png` – power-circuit schematic  
